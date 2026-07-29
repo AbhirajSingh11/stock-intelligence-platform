@@ -21,7 +21,11 @@ function formatSignedCurrency(value: number, currency: string) {
 
 export function WatchlistGrid({ items, currency }: WatchlistGridProps) {
   return (
-    <section id="watchlist" aria-labelledby="watchlist-heading">
+    <section
+      id="watchlist"
+      className="scroll-mt-36 lg:scroll-mt-8"
+      aria-labelledby="watchlist-heading"
+    >
       <div className="mb-3 flex items-end justify-between gap-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-secondary">

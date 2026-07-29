@@ -36,6 +36,13 @@ const asOfFormatter = new Intl.DateTimeFormat("en-US", {
   timeZoneName: "short",
 });
 
+const secDateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
 function parseIsoDate(date: string): Date {
   return new Date(`${date}T00:00:00Z`);
 }
@@ -85,3 +92,22 @@ export function formatAsOf(timestamp: string): string {
   return asOfFormatter.format(new Date(timestamp));
 }
 
+export function formatSecDate(date: string): string {
+  return secDateFormatter.format(parseIsoDate(date));
+}
+
+export function formatFiscalYearEnd(value: string | null): string {
+  if (!value || !/^\d{4}$/.test(value)) {
+    return "Not reported";
+  }
+
+  const month = Number(value.slice(0, 2));
+  const day = Number(value.slice(2, 4));
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    return value;
+  }
+
+  return secDateFormatter.format(
+    new Date(Date.UTC(2024, month - 1, day)),
+  ).replace(", 2024", "");
+}

@@ -53,9 +53,21 @@ Use a professional, dark institutional research-terminal interface:
   environment variables in an example environment file when introduced.
 - Prefer PowerShell-compatible commands in project documentation.
 
+## Automated Validation
+
+- Automated validation must never start Uvicorn with `--reload`.
+- Use a non-reloading Uvicorn process for automated tests.
+- Track the root process created for validation.
+- On Windows, stop its complete process tree with
+  `taskkill /PID <pid> /T /F` inside a `finally` block.
+- After validation, explicitly verify that no process is listening on the
+  validation ports.
+- Do not report that processes were stopped unless the port checks confirm it.
+- Use temporary, non-default ports for automated validation when practical so
+  validation cannot conflict with a developer's active servers.
+
 ## Current Repository Shape
 
 - `frontend/` contains the Next.js application.
 - `backend/` contains the FastAPI application and its tests.
 - Root-level files document and coordinate the two applications.
-

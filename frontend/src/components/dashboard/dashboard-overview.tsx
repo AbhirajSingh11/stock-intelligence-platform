@@ -17,6 +17,7 @@ type DashboardState =
   | { status: "error"; message: string };
 
 const initialDashboardState: DashboardState = { status: "loading" };
+const dashboardSectionIds = new Set(["portfolio", "watchlist", "thesis"]);
 
 export function DashboardOverview() {
   const [state, setState] = useState<DashboardState>(initialDashboardState);
@@ -45,6 +46,23 @@ export function DashboardOverview() {
     return () => controller.abort();
   }, [requestVersion]);
 
+  useEffect(() => {
+    if (state.status !== "success") {
+      return;
+    }
+
+    const sectionId = window.location.hash.slice(1);
+    if (!dashboardSectionIds.has(sectionId)) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ block: "start" });
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [state.status]);
+
   function retry() {
     setState({ status: "loading" });
     setRequestVersion((version) => version + 1);
@@ -69,13 +87,13 @@ export function DashboardOverview() {
 
       <div
         id="portfolio"
-        className="grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(300px,0.85fr)]"
+        className="grid scroll-mt-36 items-start gap-4 lg:scroll-mt-8 xl:grid-cols-[minmax(0,2fr)_minmax(300px,0.85fr)]"
       >
         <PerformanceChart
           performance={data.performance}
           currency={data.currency}
         />
-        <div id="thesis">
+        <div id="thesis" className="scroll-mt-36 lg:scroll-mt-8">
           <ThesisSignals signals={data.thesis_signals} />
         </div>
       </div>

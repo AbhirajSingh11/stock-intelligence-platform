@@ -1,4 +1,9 @@
 import type { DashboardOverviewResponse } from "@/types/dashboard";
+import type {
+  CompanyFilingsResponse,
+  CompanyProfileResponse,
+  CompanySearchResponse,
+} from "@/types/company";
 
 const defaultApiBaseUrl = "http://127.0.0.1:8000";
 
@@ -10,13 +15,25 @@ export class ApiRequestError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    readonly code?: string,
   ) {
     super(message);
     this.name = "ApiRequestError";
   }
 }
 
-async function requestJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+interface ApiErrorPayload {
+  error?: {
+    code?: string;
+    message?: string;
+  };
+}
+
+async function requestJson<T>(
+  path: string,
+  resourceName: string,
+  signal?: AbortSignal,
+): Promise<T> {
   let response: Response;
 
   try {
@@ -36,9 +53,18 @@ async function requestJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   }
 
   if (!response.ok) {
+    let payload: ApiErrorPayload | undefined;
+    try {
+      payload = (await response.json()) as ApiErrorPayload;
+    } catch {
+      payload = undefined;
+    }
+
     throw new ApiRequestError(
-      `FastAPI returned ${response.status} while loading the dashboard.`,
+      payload?.error?.message ??
+        `FastAPI returned ${response.status} while loading ${resourceName}.`,
       response.status,
+      payload?.error?.code,
     );
   }
 
@@ -50,7 +76,49 @@ export function getDashboardOverview(
 ): Promise<DashboardOverviewResponse> {
   return requestJson<DashboardOverviewResponse>(
     "/api/v1/dashboard/overview",
+    "the dashboard",
     signal,
   );
 }
 
+export function searchCompanies(
+  query: string,
+  limit = 8,
+  signal?: AbortSignal,
+): Promise<CompanySearchResponse> {
+  const params = new URLSearchParams({
+    query,
+    limit: String(limit),
+  });
+  return requestJson<CompanySearchResponse>(
+    `/api/v1/companies/search?${params.toString()}`,
+    "company search results",
+    signal,
+  );
+}
+
+export function getCompanyProfile(
+  ticker: string,
+  signal?: AbortSignal,
+): Promise<CompanyProfileResponse> {
+  return requestJson<CompanyProfileResponse>(
+    `/api/v1/companies/${encodeURIComponent(ticker)}`,
+    `${ticker} company data`,
+    signal,
+  );
+}
+
+export function getCompanyFilings(
+  ticker: string,
+  signal?: AbortSignal,
+): Promise<CompanyFilingsResponse> {
+  const params = new URLSearchParams({
+    forms: "10-K,10-Q,8-K",
+    limit: "20",
+  });
+  return requestJson<CompanyFilingsResponse>(
+    `/api/v1/companies/${encodeURIComponent(ticker)}/filings?${params.toString()}`,
+    `${ticker} filing history`,
+    signal,
+  );
+}

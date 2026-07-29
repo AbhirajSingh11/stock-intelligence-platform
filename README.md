@@ -6,14 +6,16 @@ long-term investors.
 The project is being built incrementally as a learning project. Milestone 1
 established the Next.js and FastAPI foundations. Milestone 2 adds a responsive
 frontend dashboard. Milestone 3 moves dashboard data ownership to FastAPI and
-establishes a typed frontend-to-backend data flow.
+establishes a typed frontend-to-backend data flow. Milestone 4 adds official
+SEC EDGAR company search, company profiles, and recent filing history.
 
 ## Technology
 
 - **Frontend:** Next.js, TypeScript, Tailwind CSS
 - **Backend:** Python, FastAPI
 - **Database:** none required yet; PostgreSQL is planned for a later milestone
-- **Data sources:** free SEC EDGAR and free market-data APIs in later milestones
+- **Data sources:** official, free SEC EDGAR JSON endpoints; market data comes
+  in a later milestone
 
 All required tools and services must remain free.
 
@@ -80,6 +82,7 @@ Start FastAPI:
 ```powershell
 Set-Location .\backend
 .\.venv\Scripts\Activate.ps1
+$env:SEC_USER_AGENT = "Stock Intelligence Platform your-email@example.com"
 python -m uvicorn app.main:app --reload
 ```
 
@@ -87,8 +90,13 @@ If local PowerShell policy prevents activation, activation is optional. Run
 the environment's interpreter directly:
 
 ```powershell
+$env:SEC_USER_AGENT = "Stock Intelligence Platform your-email@example.com"
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
+
+Replace `your-email@example.com` with a monitored contact address before
+making live SEC requests. This value identifies the application to the SEC; it
+is not a secret and is not sent to the browser.
 
 Open <http://localhost:8000>. The API health endpoint is available at
 <http://localhost:8000/health>, and FastAPI's interactive API documentation is
@@ -97,6 +105,16 @@ at <http://localhost:8000/docs>.
 The dashboard overview endpoint is:
 
 <http://127.0.0.1:8000/api/v1/dashboard/overview>
+
+The Milestone 4 company endpoints are:
+
+- `GET /api/v1/companies/search?query=Microsoft&limit=8`
+- `GET /api/v1/companies/MSFT`
+- `GET /api/v1/companies/MSFT/filings?forms=10-K,10-Q,8-K&limit=20`
+
+Search requires at least two non-whitespace characters. Search limits range
+from 1 to 20. Filing limits range from 1 to 100, and `forms` accepts up to ten
+unique comma-separated SEC form names.
 
 ## Local Environment Variables
 
@@ -109,16 +127,30 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 `NEXT_PUBLIC_API_BASE_URL` is embedded into browser JavaScript when Next.js
 starts or builds. Restart the frontend after changing it.
 
-Backend (optional):
+Backend:
 
 ```dotenv
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+SEC_USER_AGENT=Stock Intelligence Platform contact@example.com
 ```
 
 FastAPI uses those two explicit local origins by default, so no backend
-environment file is required for local development. To use
-`backend/.env.example`, copy it to `backend/.env` and add
-`--env-file .env` to the Uvicorn command. Wildcard origins are rejected.
+environment file is required for CORS. `SEC_USER_AGENT` is required only for
+the SEC-backed company endpoints; dashboard and health endpoints remain
+available without it. To use `backend/.env.example`, copy it to
+`backend/.env`, replace the placeholder contact, and add `--env-file .env` to
+the Uvicorn command:
+
+```powershell
+Set-Location .\backend
+Copy-Item .env.example .env
+# Edit .env and replace contact@example.com before continuing.
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --env-file .env
+```
+
+The example also documents optional SEC timeout, rate, and cache settings.
+Wildcard CORS origins are rejected, and the application will reject an SEC
+rate setting above 5 requests per second.
 
 ## Local Service Start Order
 
@@ -130,9 +162,31 @@ Starting FastAPI first lets the initial dashboard request succeed immediately.
 If FastAPI is unavailable, the frontend displays a connection error and a
 Retry button.
 
-During Milestone 3, all dashboard values remain deterministic,
-backend-owned mock data. No database, SEC service, or market-data provider is
-connected.
+Use the header search field to enter at least two ticker or company-name
+characters. Results come from the SEC ticker mapping. Select a result with the
+mouse or the arrow keys and Enter to open `/companies/[ticker]`.
+
+Dashboard values remain deterministic, backend-owned mock data during
+Milestone 4. SEC data is used only for company search, company profiles, and
+recent filing history. There is still no database or market-data provider.
+
+## SEC EDGAR Usage
+
+Company data is attributed to the
+[U.S. Securities and Exchange Commission](https://www.sec.gov/edgar/sec-api-documentation).
+The backend calls only the official SEC ticker mapping and submissions JSON
+endpoints. Filing links lead directly to `sec.gov`.
+
+The SEC allows no more than 10 requests per second. This application uses a
+stricter maximum of 5 requests per second, reuses one HTTP connection pool,
+and retries only a bounded number of transient failures. Successful ticker
+mapping responses are cached in memory for 24 hours; company submissions are
+cached for 15 minutes. Concurrent cache misses are coalesced. The cache is
+local to the FastAPI process and resets when that process restarts.
+
+The backend pins `httpx==0.28.1` because the SEC integration needs an
+asynchronous HTTP client with connection pooling, separate timeouts, and a
+mockable transport. No frontend dependency was added.
 
 ## Validation Commands
 
@@ -149,6 +203,7 @@ Backend:
 ```powershell
 Set-Location .\backend
 .\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m pip check
 ```
 
 ## Milestone Status
@@ -156,6 +211,7 @@ Set-Location .\backend
 - [x] Milestone 1: repository and application foundations
 - [x] Milestone 2: responsive frontend dashboard with typed static mock data
 - [x] Milestone 3: typed FastAPI-to-frontend dashboard data flow
+- [x] Milestone 4: SEC EDGAR company search, profiles, and recent filings
 - [ ] Watchlist and market-data milestones
 - [ ] Portfolio transactions and return calculations
 - [ ] Fundamental analysis and SEC filing retrieval
