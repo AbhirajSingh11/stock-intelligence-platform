@@ -4,8 +4,8 @@ A from-scratch stock research and portfolio intelligence platform for
 long-term investors.
 
 The project is being built incrementally as a learning project. Milestone 1
-contains only the development foundation: a Next.js frontend, a FastAPI
-backend, and health checks for both services.
+established the Next.js and FastAPI foundations. Milestone 2 adds a responsive
+frontend dashboard backed entirely by typed static mock data.
 
 ## Technology
 
@@ -99,6 +99,7 @@ Set-Location .\backend
 ## Milestone Status
 
 - [x] Milestone 1: repository and application foundations
+- [x] Milestone 2: responsive frontend dashboard with typed static mock data
 - [ ] Watchlist and market-data milestones
 - [ ] Portfolio transactions and return calculations
 - [ ] Fundamental analysis and SEC filing retrieval
