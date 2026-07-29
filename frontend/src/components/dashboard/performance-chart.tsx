@@ -3,10 +3,15 @@
 import { useMemo, useState } from "react";
 
 import {
-  performancePeriods,
-  performanceSeries,
-} from "@/data/dashboard";
-import type { PerformancePeriod } from "@/types/dashboard";
+  formatChartDate,
+  formatCompactCurrency,
+  formatCurrency,
+  formatDateRange,
+} from "@/lib/formatters";
+import type {
+  PerformancePeriod,
+  PerformanceSeries,
+} from "@/types/dashboard";
 
 const chartWidth = 760;
 const chartHeight = 270;
@@ -14,24 +19,39 @@ const padding = { top: 18, right: 18, bottom: 38, left: 58 };
 const plotWidth = chartWidth - padding.left - padding.right;
 const plotHeight = chartHeight - padding.top - padding.bottom;
 const defaultPerformancePeriod: PerformancePeriod = "1Y";
+const performancePeriods: PerformancePeriod[] = [
+  "1M",
+  "3M",
+  "6M",
+  "1Y",
+  "ALL",
+];
 
-const compactCurrencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
+interface PerformanceChartProps {
+  performance: PerformanceSeries[];
+  currency: string;
+}
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-});
-
-export function PerformanceChart() {
+export function PerformanceChart({
+  performance,
+  currency,
+}: PerformanceChartProps) {
   const [selectedPeriod, setSelectedPeriod] =
     useState<PerformancePeriod>(defaultPerformancePeriod);
-  const series = performanceSeries[selectedPeriod];
+  const series = useMemo(
+    () => {
+      const match = performance.find(
+        (candidate) => candidate.period === selectedPeriod,
+      );
+      if (!match) {
+        throw new Error(
+          `Dashboard response is missing the ${selectedPeriod} series.`,
+        );
+      }
+      return match;
+    },
+    [performance, selectedPeriod],
+  );
 
   const chart = useMemo(() => {
     const values = series.points.map((point) => point.value);
@@ -48,7 +68,12 @@ export function PerformanceChart() {
         (index / Math.max(series.points.length - 1, 1)) * plotWidth;
       const y =
         padding.top + ((yMax - point.value) / Math.max(yRange, 1)) * plotHeight;
-      return { ...point, x, y };
+      return {
+        ...point,
+        label: formatChartDate(point.date, selectedPeriod),
+        x,
+        y,
+      };
     });
 
     const linePath = points
@@ -66,7 +91,7 @@ export function PerformanceChart() {
     });
 
     return { points, linePath, areaPath, ticks };
-  }, [series]);
+  }, [selectedPeriod, series]);
 
   const labelStep = Math.max(1, Math.ceil((chart.points.length - 1) / 4));
 
@@ -85,14 +110,14 @@ export function PerformanceChart() {
               id="performance-heading"
               className="financial-figure font-mono text-2xl font-semibold text-foreground"
             >
-              {currencyFormatter.format(series.points.at(-1)?.value ?? 0)}
+              {formatCurrency(series.points.at(-1)?.value ?? 0, currency)}
             </h2>
             <span className="financial-figure font-mono text-sm font-semibold text-positive">
-              +{series.changePercent.toFixed(1)}%
+              {`+${series.change_percent.toFixed(1)}%`}
             </span>
           </div>
           <p className="mt-1 font-mono text-[10px] text-secondary">
-            {series.rangeLabel}
+            {formatDateRange(series.start_date, series.end_date)}
           </p>
         </div>
 
@@ -134,9 +159,9 @@ export function PerformanceChart() {
               {`Portfolio value for the ${selectedPeriod} period`}
             </title>
             <desc id="chart-description">
-              {`Portfolio value changed ${series.changePercent.toFixed(
+              {`Portfolio value changed ${series.change_percent.toFixed(
                 1,
-              )} percent over ${series.rangeLabel}.`}
+              )} percent from ${series.start_date} through ${series.end_date}.`}
             </desc>
 
             {chart.ticks.map((tick) => (
@@ -158,7 +183,7 @@ export function PerformanceChart() {
                   fontSize="10"
                   textAnchor="end"
                 >
-                  {compactCurrencyFormatter.format(tick.value)}
+                  {formatCompactCurrency(tick.value, currency)}
                 </text>
               </g>
             ))}
@@ -236,8 +261,8 @@ export function PerformanceChart() {
             <tbody>
               {series.points.map((point) => (
                 <tr key={point.date}>
-                  <td>{point.label}</td>
-                  <td>{currencyFormatter.format(point.value)}</td>
+                  <td>{formatChartDate(point.date, selectedPeriod)}</td>
+                  <td>{formatCurrency(point.value, currency)}</td>
                 </tr>
               ))}
             </tbody>

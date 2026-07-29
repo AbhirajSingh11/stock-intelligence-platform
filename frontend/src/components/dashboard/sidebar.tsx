@@ -116,7 +116,7 @@ export function Sidebar() {
             Local system online
           </div>
           <p className="mt-2 text-[11px] leading-4 text-secondary">
-            Milestone 02 · Static mock data
+            Milestone 03 · Backend mock API
           </p>
         </div>
       </aside>

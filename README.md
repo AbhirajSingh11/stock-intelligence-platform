@@ -5,7 +5,8 @@ long-term investors.
 
 The project is being built incrementally as a learning project. Milestone 1
 established the Next.js and FastAPI foundations. Milestone 2 adds a responsive
-frontend dashboard backed entirely by typed static mock data.
+frontend dashboard. Milestone 3 moves dashboard data ownership to FastAPI and
+establishes a typed frontend-to-backend data flow.
 
 ## Technology
 
@@ -40,9 +41,23 @@ the same npm installation.
 
 ## Run the Frontend
 
+Install frontend packages once:
+
 ```powershell
 Set-Location .\frontend
 npm.cmd install
+```
+
+The browser-visible API base URL defaults to `http://127.0.0.1:8000`. To make
+that configuration explicit, copy the committed example file:
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+Then start Next.js:
+
+```powershell
 npm.cmd run dev
 ```
 
@@ -60,7 +75,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
-Then, in a second PowerShell terminal:
+Start FastAPI:
 
 ```powershell
 Set-Location .\backend
@@ -78,6 +93,46 @@ the environment's interpreter directly:
 Open <http://localhost:8000>. The API health endpoint is available at
 <http://localhost:8000/health>, and FastAPI's interactive API documentation is
 at <http://localhost:8000/docs>.
+
+The dashboard overview endpoint is:
+
+<http://127.0.0.1:8000/api/v1/dashboard/overview>
+
+## Local Environment Variables
+
+Frontend (`frontend/.env.local`):
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
+```
+
+`NEXT_PUBLIC_API_BASE_URL` is embedded into browser JavaScript when Next.js
+starts or builds. Restart the frontend after changing it.
+
+Backend (optional):
+
+```dotenv
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+```
+
+FastAPI uses those two explicit local origins by default, so no backend
+environment file is required for local development. To use
+`backend/.env.example`, copy it to `backend/.env` and add
+`--env-file .env` to the Uvicorn command. Wildcard origins are rejected.
+
+## Local Service Start Order
+
+1. Start FastAPI on port 8000.
+2. Start Next.js on port 3000 in a second terminal.
+3. Open <http://localhost:3000>.
+
+Starting FastAPI first lets the initial dashboard request succeed immediately.
+If FastAPI is unavailable, the frontend displays a connection error and a
+Retry button.
+
+During Milestone 3, all dashboard values remain deterministic,
+backend-owned mock data. No database, SEC service, or market-data provider is
+connected.
 
 ## Validation Commands
 
@@ -100,6 +155,7 @@ Set-Location .\backend
 
 - [x] Milestone 1: repository and application foundations
 - [x] Milestone 2: responsive frontend dashboard with typed static mock data
+- [x] Milestone 3: typed FastAPI-to-frontend dashboard data flow
 - [ ] Watchlist and market-data milestones
 - [ ] Portfolio transactions and return calculations
 - [ ] Fundamental analysis and SEC filing retrieval

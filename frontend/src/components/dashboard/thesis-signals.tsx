@@ -1,4 +1,5 @@
 import type { SignalTone, ThesisSignal } from "@/types/dashboard";
+import { formatReviewedDate } from "@/lib/formatters";
 
 interface ThesisSignalsProps {
   signals: ThesisSignal[];
@@ -48,8 +49,11 @@ export function ThesisSignals({ signals }: ThesisSignalsProps) {
             </div>
             <p className="mt-4 text-[11px] text-secondary">
               Last reviewed{" "}
-              <time className="financial-figure font-mono text-foreground/80">
-                {signal.lastReviewed}
+              <time
+                dateTime={signal.last_reviewed}
+                className="financial-figure font-mono text-foreground/80"
+              >
+                {formatReviewedDate(signal.last_reviewed)}
               </time>
             </p>
           </li>
@@ -58,4 +62,3 @@ export function ThesisSignals({ signals }: ThesisSignalsProps) {
     </section>
   );
 }
-

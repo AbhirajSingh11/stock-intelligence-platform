@@ -1,44 +1,44 @@
 import type { PortfolioSummary as PortfolioSummaryData } from "@/types/dashboard";
+import { formatCurrency } from "@/lib/formatters";
 import { Icon } from "./icons";
 
 interface PortfolioSummaryProps {
   summary: PortfolioSummaryData;
+  currency: string;
 }
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-});
-
-function formatSignedCurrency(value: number) {
-  return `${value >= 0 ? "+" : "−"}${currencyFormatter.format(
+function formatSignedCurrency(value: number, currency: string) {
+  return `${value >= 0 ? "+" : "−"}${formatCurrency(
     Math.abs(value),
+    currency,
   )}`;
 }
 
-export function PortfolioSummary({ summary }: PortfolioSummaryProps) {
+export function PortfolioSummary({
+  summary,
+  currency,
+}: PortfolioSummaryProps) {
   const metrics = [
     {
       label: "Total portfolio value",
-      value: currencyFormatter.format(summary.totalValue),
-      detail: "3 active positions",
+      value: formatCurrency(summary.total_value, currency),
+      detail: `${summary.position_count} active positions`,
       featured: true,
     },
     {
       label: "Total gain",
-      value: formatSignedCurrency(summary.totalGain),
+      value: formatSignedCurrency(summary.total_gain, currency),
       detail: "Since inception",
     },
     {
       label: "Total return",
-      value: `+${summary.totalReturnPercent.toFixed(1)}%`,
+      value: `+${summary.total_return_percent.toFixed(1)}%`,
       detail: "Cost-weighted",
     },
     {
       label: "Today’s change",
-      value: formatSignedCurrency(summary.todayChange),
-      detail: "+0.75% today",
+      value: formatSignedCurrency(summary.today_change, currency),
+      detail: `+${summary.today_change_percent.toFixed(2)}% today`,
     },
   ];
 
@@ -52,7 +52,7 @@ export function PortfolioSummary({ summary }: PortfolioSummaryProps) {
           Portfolio summary
         </h2>
         <p className="font-mono text-[10px] uppercase tracking-wider text-secondary">
-          Mock data · USD
+          {`Backend mock · ${currency}`}
         </p>
       </div>
 
@@ -86,4 +86,3 @@ export function PortfolioSummary({ summary }: PortfolioSummaryProps) {
     </section>
   );
 }
-

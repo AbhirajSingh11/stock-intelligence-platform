@@ -1,4 +1,4 @@
-"""Response contracts exposed by the API."""
+"""System endpoint response contracts."""
 
 from typing import Literal
 

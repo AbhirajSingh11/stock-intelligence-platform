@@ -1,14 +1,10 @@
-import type { SignalTone, WatchlistItem } from "@/types/dashboard";
+import { formatCurrency } from "@/lib/formatters";
+import type { SignalTone, WatchlistCompany } from "@/types/dashboard";
 
 interface WatchlistGridProps {
-  items: WatchlistItem[];
+  items: WatchlistCompany[];
+  currency: string;
 }
-
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-});
 
 const toneStyles: Record<SignalTone, string> = {
   positive: "border-positive/30 bg-positive/10 text-positive",
@@ -16,13 +12,14 @@ const toneStyles: Record<SignalTone, string> = {
   neutral: "border-secondary/30 bg-secondary/10 text-secondary",
 };
 
-function formatSignedCurrency(value: number) {
-  return `${value >= 0 ? "+" : "−"}${currencyFormatter.format(
+function formatSignedCurrency(value: number, currency: string) {
+  return `${value >= 0 ? "+" : "−"}${formatCurrency(
     Math.abs(value),
+    currency,
   )}`;
 }
 
-export function WatchlistGrid({ items }: WatchlistGridProps) {
+export function WatchlistGrid({ items, currency }: WatchlistGridProps) {
   return (
     <section id="watchlist" aria-labelledby="watchlist-heading">
       <div className="mb-3 flex items-end justify-between gap-4">
@@ -44,7 +41,7 @@ export function WatchlistGrid({ items }: WatchlistGridProps) {
 
       <div className="grid gap-3 md:grid-cols-3">
         {items.map((item) => {
-          const isPositive = item.dailyChange >= 0;
+          const isPositive = item.daily_change >= 0;
           return (
             <article
               key={item.ticker}
@@ -60,9 +57,9 @@ export function WatchlistGrid({ items }: WatchlistGridProps) {
                   </p>
                 </div>
                 <span
-                  className={`shrink-0 border px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-wide ${toneStyles[item.thesisTone]}`}
+                  className={`shrink-0 border px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-wide ${toneStyles[item.thesis_tone]}`}
                 >
-                  {item.thesisState}
+                  {item.thesis_state}
                 </span>
               </div>
 
@@ -72,7 +69,7 @@ export function WatchlistGrid({ items }: WatchlistGridProps) {
                     Last price
                   </p>
                   <p className="financial-figure mt-1 font-mono text-xl font-semibold text-foreground">
-                    {currencyFormatter.format(item.price)}
+                    {formatCurrency(item.price, currency)}
                   </p>
                 </div>
                 <div className="text-right">
@@ -84,10 +81,10 @@ export function WatchlistGrid({ items }: WatchlistGridProps) {
                       isPositive ? "text-positive" : "text-warning"
                     }`}
                   >
-                    {formatSignedCurrency(item.dailyChange)}{" "}
+                    {formatSignedCurrency(item.daily_change, currency)}{" "}
                     <span>
                       ({isPositive ? "+" : "−"}
-                      {Math.abs(item.dailyChangePercent).toFixed(2)}%)
+                      {Math.abs(item.daily_change_percent).toFixed(2)}%)
                     </span>
                   </p>
                 </div>
@@ -97,7 +94,7 @@ export function WatchlistGrid({ items }: WatchlistGridProps) {
                 <div className="flex items-center justify-between gap-4">
                   <dt className="text-[11px] text-secondary">Position value</dt>
                   <dd className="financial-figure font-mono text-sm font-medium text-foreground">
-                    {currencyFormatter.format(item.positionValue)}
+                    {formatCurrency(item.position_value, currency)}
                   </dd>
                 </div>
               </dl>
@@ -108,4 +105,3 @@ export function WatchlistGrid({ items }: WatchlistGridProps) {
     </section>
   );
 }
-
