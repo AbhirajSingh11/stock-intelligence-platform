@@ -56,21 +56,6 @@ class ThesisSignal(BaseModel):
     last_reviewed: date
 
 
-class WatchlistCompany(BaseModel):
-    """Market and position snapshot for one watchlist company."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    ticker: str
-    company: str
-    price: float
-    daily_change: float
-    daily_change_percent: float
-    position_value: float
-    thesis_state: ThesisState
-    thesis_tone: SignalTone
-
-
 class DashboardOverview(BaseModel):
     """Complete dashboard snapshot returned by the versioned endpoint."""
 
@@ -81,5 +66,3 @@ class DashboardOverview(BaseModel):
     portfolio_summary: PortfolioSummary
     performance: list[PerformanceSeries] = Field(min_length=5, max_length=5)
     thesis_signals: list[ThesisSignal]
-    watchlist: list[WatchlistCompany]
-

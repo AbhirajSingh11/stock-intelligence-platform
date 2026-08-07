@@ -9,13 +9,15 @@ frontend dashboard. Milestone 3 moves dashboard data ownership to FastAPI and
 establishes a typed frontend-to-backend data flow. Milestone 4 adds official
 SEC EDGAR company search, company profiles, and recent filing history.
 Milestone 5 adds normalized annual and quarterly company fundamentals from the
-official SEC Company Facts API.
+official SEC Company Facts API. Milestone 6 adds the first durable application
+state: a single-user watchlist stored locally in SQLite through SQLAlchemy and
+versioned Alembic migrations.
 
 ## Technology
 
 - **Frontend:** Next.js, TypeScript, Tailwind CSS
 - **Backend:** Python, FastAPI
-- **Database:** none required yet; PostgreSQL is planned for a later milestone
+- **Database:** SQLite for local development; PostgreSQL is planned for a later milestone
 - **Data sources:** official, free SEC EDGAR JSON endpoints; market data comes
   in a later milestone
 
@@ -85,6 +87,7 @@ Start FastAPI:
 Set-Location .\backend
 .\.venv\Scripts\Activate.ps1
 $env:SEC_USER_AGENT = "Stock Intelligence Platform your-email@example.com"
+python -m alembic upgrade head
 python -m uvicorn app.main:app --reload
 ```
 
@@ -93,8 +96,12 @@ the environment's interpreter directly:
 
 ```powershell
 $env:SEC_USER_AGENT = "Stock Intelligence Platform your-email@example.com"
+.\.venv\Scripts\python.exe -m alembic upgrade head
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
+
+Run the migration before the first server start and after pulling any new
+migration. FastAPI intentionally does not create or alter tables at startup.
 
 Replace `your-email@example.com` with a monitored contact address before
 making live SEC requests. This value identifies the application to the SEC; it
@@ -118,6 +125,17 @@ The Milestone 5 fundamentals endpoint is:
 
 - `GET /api/v1/companies/MSFT/fundamentals`
 
+The Milestone 6 watchlist endpoints are:
+
+- `GET /api/v1/watchlist`
+- `POST /api/v1/watchlist` with JSON such as `{ "ticker": "MSFT" }`
+- `DELETE /api/v1/watchlist/MSFT`
+
+Creates resolve the ticker through the official SEC mapping before storing its
+normalized ticker, ten-digit CIK, and official company name. A duplicate create
+returns `409 watchlist_entry_exists`; deleting an absent ticker returns
+`404 watchlist_entry_not_found`.
+
 Search requires at least two non-whitespace characters. Search limits range
 from 1 to 20. Filing limits range from 1 to 100, and `forms` accepts up to ten
 unique comma-separated SEC form names.
@@ -137,6 +155,7 @@ Backend:
 
 ```dotenv
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+DATABASE_URL=sqlite+aiosqlite:///./data/stock-intelligence.db
 SEC_USER_AGENT=Stock Intelligence Platform contact@example.com
 ```
 
@@ -154,15 +173,20 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --env-file .env
 ```
 
-The example also documents optional SEC timeout, rate, and cache settings.
+`DATABASE_URL` is optional; the value above is the safe default when commands
+run from `backend/`. It creates `backend/data/stock-intelligence.db`, which is
+local runtime data and ignored by Git. When selecting a different database,
+set `DATABASE_URL` in the PowerShell session before running both Alembic and
+Uvicorn. The example also documents optional SEC timeout, rate, and cache settings.
 Wildcard CORS origins are rejected, and the application will reject an SEC
 rate setting above 5 requests per second.
 
 ## Local Service Start Order
 
-1. Start FastAPI on port 8000.
-2. Start Next.js on port 3000 in a second terminal.
-3. Open <http://localhost:3000>.
+1. From `backend/`, run `.\.venv\Scripts\python.exe -m alembic upgrade head`.
+2. Start FastAPI on port 8000.
+3. Start Next.js on port 3000 in a second terminal.
+4. Open <http://localhost:3000>.
 
 Starting FastAPI first lets the initial dashboard request succeed immediately.
 If FastAPI is unavailable, the frontend displays a connection error and a
@@ -172,10 +196,63 @@ Use the header search field to enter at least two ticker or company-name
 characters. Results come from the SEC ticker mapping. Select a result with the
 mouse or the arrow keys and Enter to open `/companies/[ticker]`.
 
-Dashboard values remain deterministic, backend-owned mock data during
-Milestone 5. Official SEC data is used for company search, profiles, recent
-filing history, and standardized company fundamentals. There is still no
-database or market-data provider.
+Portfolio performance and thesis signals remain deterministic, backend-owned
+mock data during Milestone 6. The watchlist is no longer part of that mock
+dashboard response: it is stored in SQLite and loaded through its own API.
+Official SEC data is used for company search, profiles, recent filing history,
+standardized company fundamentals, and watchlist identity validation. There is
+still no market-data provider, so watchlist cards do not claim prices or
+position values.
+
+## Local Database and Migrations
+
+SQLAlchemy 2.x provides typed models, an async engine, and request-scoped
+sessions. `aiosqlite` is the local async driver. Alembic owns every schema
+change. The route, service, repository, schema, model, and database lifecycle
+layers are kept separate so HTTP details do not leak into persistence code.
+
+Useful migration commands, run from `backend/`, are:
+
+```powershell
+# Apply every pending migration.
+.\.venv\Scripts\python.exe -m alembic upgrade head
+
+# Show the revision currently applied to the local database.
+.\.venv\Scripts\python.exe -m alembic current
+
+# Revert the most recent migration during development.
+.\.venv\Scripts\python.exe -m alembic downgrade -1
+```
+
+To intentionally reset only the default local development database, first
+stop FastAPI, then run:
+
+```powershell
+Set-Location .\backend
+Remove-Item -LiteralPath .\data\stock-intelligence.db -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath .\data\stock-intelligence.db-shm -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath .\data\stock-intelligence.db-wal -ErrorAction SilentlyContinue
+.\.venv\Scripts\python.exe -m alembic upgrade head
+```
+
+This permanently removes the local watchlist. Migrations and test fixtures are
+versioned and are not deleted. Automated tests override `DATABASE_URL` with a
+fresh SQLite file under pytest's temporary directory, migrate it, and release
+all connections during cleanup; they never use the developer database.
+
+Milestone 6 is explicitly single-user and unauthenticated. A future PostgreSQL
+migration should preserve the API, service, repository, and typed model
+boundaries; it will require a PostgreSQL async driver, a PostgreSQL
+`DATABASE_URL`, and review of migration/database-specific constraints. No
+PostgreSQL server or driver is required now.
+
+### Manual Persistence Check
+
+1. Start FastAPI and Next.js in the order above.
+2. Search for `MSFT`, open the Microsoft research page, and choose **Add to watchlist**.
+3. Open `/watchlist` and confirm Microsoft appears.
+4. Stop FastAPI, restart it without changing `DATABASE_URL`, and refresh `/watchlist`.
+5. Confirm Microsoft remains, then remove it and verify the empty state.
 
 ## SEC EDGAR Usage
 
@@ -236,7 +313,8 @@ units, periods, or provenance.
 
 The backend pins `httpx==0.28.1` because the SEC integration needs an
 asynchronous HTTP client with connection pooling, separate timeouts, and a
-mockable transport. No frontend dependency was added.
+mockable transport. Milestone 6 adds `SQLAlchemy==2.0.51`, `alembic==1.18.5`,
+and `aiosqlite==0.22.1`. No frontend dependency was added.
 
 ## Validation Commands
 
@@ -263,7 +341,8 @@ Set-Location .\backend
 - [x] Milestone 3: typed FastAPI-to-frontend dashboard data flow
 - [x] Milestone 4: SEC EDGAR company search, profiles, and recent filings
 - [x] Milestone 5: SEC Company Facts financial trends and provenance
-- [ ] Watchlist and market-data milestones
+- [x] Milestone 6: local SQLite persistence and a real watchlist
+- [ ] Market-data integration
 - [ ] Portfolio transactions and return calculations
 - [ ] Deeper fundamental analysis and SEC filing-document retrieval
 - [ ] Thesis tracking and evidence comparison

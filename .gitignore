@@ -41,3 +41,8 @@ dist/
 tmp/
 temp/
 
+# Local database runtime files (schema migrations remain versioned)
+*.db
+*.db-shm
+*.db-wal
+backend/data/

@@ -1,25 +1,24 @@
-import { formatCurrency } from "@/lib/formatters";
-import type { SignalTone, WatchlistCompany } from "@/types/dashboard";
+"use client";
 
-interface WatchlistGridProps {
-  items: WatchlistCompany[];
-  currency: string;
+import Link from "next/link";
+
+import { useWatchlist } from "@/hooks/use-watchlist";
+import { formatSecDate } from "@/lib/formatters";
+
+function WatchlistSkeleton() {
+  return (
+    <div className="grid gap-3 md:grid-cols-3" role="status">
+      {Array.from({ length: 3 }, (_, index) => (
+        <div key={index} className="h-36 animate-pulse border border-border bg-panel motion-reduce:animate-none" />
+      ))}
+      <span className="sr-only">Loading persisted watchlist…</span>
+    </div>
+  );
 }
 
-const toneStyles: Record<SignalTone, string> = {
-  positive: "border-positive/30 bg-positive/10 text-positive",
-  warning: "border-warning/30 bg-warning/10 text-warning",
-  neutral: "border-secondary/30 bg-secondary/10 text-secondary",
-};
+export function WatchlistGrid() {
+  const watchlist = useWatchlist();
 
-function formatSignedCurrency(value: number, currency: string) {
-  return `${value >= 0 ? "+" : "−"}${formatCurrency(
-    Math.abs(value),
-    currency,
-  )}`;
-}
-
-export function WatchlistGrid({ items, currency }: WatchlistGridProps) {
   return (
     <section
       id="watchlist"
@@ -29,83 +28,78 @@ export function WatchlistGrid({ items, currency }: WatchlistGridProps) {
       <div className="mb-3 flex items-end justify-between gap-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-secondary">
-            Monitored companies
+            Locally persisted companies
           </p>
-          <h2
-            id="watchlist-heading"
-            className="mt-1 text-base font-semibold text-foreground"
-          >
+          <h2 id="watchlist-heading" className="mt-1 text-base font-semibold text-foreground">
             Watchlist
           </h2>
         </div>
-        <p className="font-mono text-[10px] uppercase tracking-wider text-secondary">
-          3 securities · Mock data
-        </p>
+        <Link
+          href="/watchlist"
+          className="font-mono text-[10px] font-semibold uppercase tracking-wider text-positive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-positive"
+        >
+          Manage watchlist →
+        </Link>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        {items.map((item) => {
-          const isPositive = item.daily_change >= 0;
-          return (
-            <article
-              key={item.ticker}
-              className="border border-border bg-panel p-4 sm:p-5"
+      {watchlist.status === "loading" ? <WatchlistSkeleton /> : null}
+
+      {watchlist.status === "error" ? (
+        <div className="border border-warning/50 bg-panel p-5" role="alert">
+          <p className="text-sm text-foreground">Watchlist unavailable</p>
+          <p className="mt-2 text-xs leading-5 text-secondary">{watchlist.message}</p>
+          <button
+            type="button"
+            onClick={watchlist.retryLoad}
+            className="mt-4 border border-warning px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-warning outline-none hover:bg-warning/10 focus-visible:ring-2 focus-visible:ring-warning"
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
+
+      {watchlist.status === "success" && watchlist.entries.length === 0 ? (
+        <div className="border border-border bg-panel p-6">
+          <p className="text-sm font-medium text-foreground">No companies followed yet</p>
+          <p className="mt-2 max-w-2xl text-xs leading-5 text-secondary">
+            Search for a ticker, open its company research page, and choose Add to watchlist.
+          </p>
+        </div>
+      ) : null}
+
+      {watchlist.status === "success" && watchlist.entries.length > 0 ? (
+        <div className="grid gap-3 md:grid-cols-3">
+          {watchlist.entries.map((entry) => (
+            <Link
+              key={entry.id}
+              href={`/companies/${encodeURIComponent(entry.ticker)}`}
+              className="group border border-border bg-panel p-4 outline-none hover:border-positive/50 focus-visible:ring-2 focus-visible:ring-positive sm:p-5"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <h3 className="font-mono text-base font-semibold tracking-wide text-foreground">
-                    {item.ticker}
+                  <h3 className="font-mono text-base font-semibold tracking-wide text-foreground group-hover:text-positive">
+                    {entry.ticker}
                   </h3>
                   <p className="mt-1 truncate text-[11px] text-secondary">
-                    {item.company}
+                    {entry.company_name}
                   </p>
                 </div>
-                <span
-                  className={`shrink-0 border px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-wide ${toneStyles[item.thesis_tone]}`}
-                >
-                  {item.thesis_state}
+                <span className="border border-positive/30 bg-positive/10 px-2 py-1 font-mono text-[9px] uppercase tracking-wide text-positive">
+                  Followed
                 </span>
               </div>
-
-              <div className="mt-6 flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-secondary">
-                    Last price
-                  </p>
-                  <p className="financial-figure mt-1 font-mono text-xl font-semibold text-foreground">
-                    {formatCurrency(item.price, currency)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] uppercase tracking-wider text-secondary">
-                    Daily change
-                  </p>
-                  <p
-                    className={`financial-figure mt-1 font-mono text-xs font-semibold ${
-                      isPositive ? "text-positive" : "text-warning"
-                    }`}
-                  >
-                    {formatSignedCurrency(item.daily_change, currency)}{" "}
-                    <span>
-                      ({isPositive ? "+" : "−"}
-                      {Math.abs(item.daily_change_percent).toFixed(2)}%)
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              <dl className="mt-5 border-t border-border pt-4">
+              <dl className="mt-5 border-t border-border pt-4 text-[11px]">
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="text-[11px] text-secondary">Position value</dt>
-                  <dd className="financial-figure font-mono text-sm font-medium text-foreground">
-                    {formatCurrency(item.position_value, currency)}
+                  <dt className="text-secondary">Added</dt>
+                  <dd className="font-mono text-foreground">
+                    {formatSecDate(entry.added_at.slice(0, 10))}
                   </dd>
                 </div>
               </dl>
-            </article>
-          );
-        })}
-      </div>
+            </Link>
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }

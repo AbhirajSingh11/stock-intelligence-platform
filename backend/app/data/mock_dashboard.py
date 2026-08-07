@@ -132,37 +132,4 @@ MOCK_DASHBOARD_OVERVIEW: dict[str, object] = {
             "last_reviewed": "2026-07-18",
         },
     ],
-    "watchlist": [
-        {
-            "ticker": "MSFT",
-            "company": "Microsoft Corporation",
-            "price": 512.34,
-            "daily_change": 7.18,
-            "daily_change_percent": 1.42,
-            "position_value": 10560.40,
-            "thesis_state": "Strengthening",
-            "thesis_tone": "positive",
-        },
-        {
-            "ticker": "UBER",
-            "company": "Uber Technologies",
-            "price": 92.18,
-            "daily_change": -0.69,
-            "daily_change_percent": -0.74,
-            "position_value": 5527.25,
-            "thesis_state": "Review required",
-            "thesis_tone": "warning",
-        },
-        {
-            "ticker": "GOOG",
-            "company": "Alphabet Class C",
-            "price": 203.44,
-            "daily_change": 1.37,
-            "daily_change_percent": 0.68,
-            "position_value": 8772.77,
-            "thesis_state": "Stable",
-            "thesis_tone": "neutral",
-        },
-    ],
 }
-

@@ -13,7 +13,7 @@ interface NavigationItem {
 
 const navigation: NavigationItem[] = [
   { label: "Dashboard", icon: "dashboard", href: "/" },
-  { label: "Watchlist", icon: "watchlist", href: "/#watchlist" },
+  { label: "Watchlist", icon: "watchlist", href: "/watchlist" },
   { label: "Portfolio", icon: "portfolio", href: "/#portfolio" },
   { label: "Filings", icon: "filings", href: null },
   { label: "Thesis", icon: "thesis", href: "/#thesis" },
@@ -53,7 +53,7 @@ function DesktopNavigation({ pathname }: NavigationProps) {
     <nav className="mt-8" aria-label="Primary navigation">
       <ul className="space-y-1">
         {navigation.map((item) => {
-          const isActive = item.href === "/" && pathname === "/";
+          const isActive = item.href === pathname;
 
           return (
             <li key={item.label}>
@@ -103,7 +103,7 @@ function MobileNavigation({ pathname }: NavigationProps) {
     >
       <ul className="flex min-w-max px-3">
         {navigation.map((item) => {
-          const isActive = item.href === "/" && pathname === "/";
+          const isActive = item.href === pathname;
 
           return (
             <li key={item.label}>
@@ -159,7 +159,7 @@ export function Sidebar() {
             Local system online
           </div>
           <p className="mt-2 text-[11px] leading-4 text-secondary">
-            Milestone 04 · SEC EDGAR
+            Milestone 06 · Local persistence
           </p>
         </div>
       </aside>

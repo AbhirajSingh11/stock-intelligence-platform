@@ -65,3 +65,15 @@ class SecMalformedResponseError(ApplicationError):
     status_code = 502
     code = "sec_malformed_response"
     default_message = "The SEC data service returned an unexpected response."
+
+
+class WatchlistEntryExistsError(ApplicationError):
+    status_code = 409
+    code = "watchlist_entry_exists"
+    default_message = "That company is already on the watchlist."
+
+
+class WatchlistEntryNotFoundError(ApplicationError):
+    status_code = 404
+    code = "watchlist_entry_not_found"
+    default_message = "That company is not on the watchlist."

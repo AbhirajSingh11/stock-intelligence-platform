@@ -11,8 +11,10 @@ from fastapi.responses import JSONResponse
 from app.api.routes.companies import router as companies_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.fundamentals import router as fundamentals_router
+from app.api.routes.watchlist import router as watchlist_router
 from app.clients.sec_edgar import SecEdgarClient, build_sec_http_client
-from app.config import get_cors_origins, get_sec_settings
+from app.config import get_cors_origins, get_database_url, get_sec_settings
+from app.db.session import Database
 from app.exceptions import ApplicationError
 from app.schemas.system import HealthResponse, ServiceInfo
 from app.services.company_service import CompanyService
@@ -21,10 +23,12 @@ from app.services.fundamentals_service import FundamentalsService
 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-    """Create and close the shared SEC connection pool with the application."""
+    """Own database and SEC client resources for one application lifespan."""
 
     settings = get_sec_settings()
+    database = Database(get_database_url())
     sec_http_client = None
+    application.state.database = database
     application.state.company_service = None
     application.state.fundamentals_service = None
 
@@ -43,12 +47,13 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     finally:
         if sec_http_client is not None:
             await sec_http_client.aclose()
+        await database.dispose()
 
 
 app = FastAPI(
     title="Stock Intelligence API",
     description="Backend services for stock research and portfolio intelligence.",
-    version="0.3.0",
+    version="0.6.0",
     lifespan=lifespan,
 )
 
@@ -56,13 +61,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=get_cors_origins(),
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Accept", "Content-Type"],
 )
 
 app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(companies_router, prefix="/api/v1")
 app.include_router(fundamentals_router, prefix="/api/v1")
+app.include_router(watchlist_router, prefix="/api/v1")
 
 
 @app.exception_handler(ApplicationError)

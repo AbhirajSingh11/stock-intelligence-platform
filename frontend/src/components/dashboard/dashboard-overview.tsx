@@ -98,10 +98,10 @@ export function DashboardOverview() {
         </div>
       </div>
 
-      <WatchlistGrid items={data.watchlist} currency={data.currency} />
+      <WatchlistGrid />
 
       <p className="text-right font-mono text-[9px] uppercase tracking-wider text-secondary">
-        {`Backend mock snapshot · As of ${formatAsOf(data.as_of)}`}
+        {`Portfolio and thesis mock snapshot · As of ${formatAsOf(data.as_of)}`}
       </p>
     </div>
   );

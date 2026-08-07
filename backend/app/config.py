@@ -8,6 +8,7 @@ DEFAULT_CORS_ORIGINS = (
     "http://127.0.0.1:3000",
 )
 MAX_SEC_REQUESTS_PER_SECOND = 5.0
+DEFAULT_DATABASE_URL = "sqlite+aiosqlite:///./data/stock-intelligence.db"
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,12 @@ class SecSettings:
     submissions_cache_ttl_seconds: float
     company_facts_cache_ttl_seconds: float
     max_retries: int = 2
+
+
+def get_database_url() -> str:
+    """Return the configured async database URL with a safe local default."""
+
+    return os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL).strip() or DEFAULT_DATABASE_URL
 
 
 def get_cors_origins() -> list[str]:

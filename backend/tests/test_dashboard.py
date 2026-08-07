@@ -23,7 +23,6 @@ def test_dashboard_overview_has_expected_structure() -> None:
         "portfolio_summary",
         "performance",
         "thesis_signals",
-        "watchlist",
     }
     assert payload["as_of"] == "2026-07-28T20:00:00Z"
     assert payload["currency"] == "USD"
@@ -62,7 +61,7 @@ def test_dashboard_overview_contains_every_chart_period() -> None:
     )
 
 
-def test_dashboard_overview_contains_thesis_and_watchlist_data() -> None:
+def test_dashboard_overview_contains_thesis_data_without_mock_watchlist() -> None:
     payload = client.get(DASHBOARD_URL).json()
 
     assert [signal["ticker"] for signal in payload["thesis_signals"]] == [
@@ -71,12 +70,7 @@ def test_dashboard_overview_contains_thesis_and_watchlist_data() -> None:
         "GOOG",
     ]
     assert payload["thesis_signals"][1]["state"] == "Review required"
-    assert [company["ticker"] for company in payload["watchlist"]] == [
-        "MSFT",
-        "UBER",
-        "GOOG",
-    ]
-    assert payload["watchlist"][0]["position_value"] == 10560.40
+    assert "watchlist" not in payload
 
 
 def test_dashboard_cors_allows_local_frontend_origin() -> None:
@@ -88,4 +82,3 @@ def test_dashboard_cors_allows_local_frontend_origin() -> None:
     assert response.headers["access-control-allow-origin"] == (
         "http://127.0.0.1:3000"
     )
-

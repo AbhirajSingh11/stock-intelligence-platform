@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { CompanyError, CompanyLoading } from "./company-states";
 import { CompanyFinancials } from "./company-financials";
+import { CompanyWatchlistControl } from "./company-watchlist-control";
 import { getCompanyFilings, getCompanyProfile } from "@/lib/api/client";
 import { formatFiscalYearEnd, formatSecDate } from "@/lib/formatters";
 import type {
@@ -156,9 +157,12 @@ function CompanyContent({ data }: { data: CompanyData }) {
               {`CIK ${profile.cik}`}
             </p>
           </div>
-          <ExternalSecLink href={profile.sec_company_url}>
-            View company on SEC.gov ↗
-          </ExternalSecLink>
+          <div className="flex flex-col items-start gap-3 sm:items-end">
+            <CompanyWatchlistControl ticker={profile.ticker} />
+            <ExternalSecLink href={profile.sec_company_url}>
+              View company on SEC.gov ↗
+            </ExternalSecLink>
+          </div>
         </div>
       </section>
 

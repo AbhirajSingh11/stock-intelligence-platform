@@ -34,23 +34,10 @@ export interface ThesisSignal {
   last_reviewed: string;
 }
 
-export interface WatchlistCompany {
-  ticker: string;
-  company: string;
-  price: number;
-  daily_change: number;
-  daily_change_percent: number;
-  position_value: number;
-  thesis_state: ThesisState;
-  thesis_tone: SignalTone;
-}
-
 export interface DashboardOverviewResponse {
   as_of: string;
   currency: string;
   portfolio_summary: PortfolioSummary;
   performance: PerformanceSeries[];
   thesis_signals: ThesisSignal[];
-  watchlist: WatchlistCompany[];
 }
-

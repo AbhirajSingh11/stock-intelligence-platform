@@ -5,6 +5,11 @@ import type {
   CompanyProfileResponse,
   CompanySearchResponse,
 } from "@/types/company";
+import type {
+  WatchlistDeleteResponse,
+  WatchlistEntry,
+  WatchlistResponse,
+} from "@/types/watchlist";
 
 const defaultApiBaseUrl = "http://127.0.0.1:8000";
 
@@ -33,16 +38,24 @@ interface ApiErrorPayload {
 async function requestJson<T>(
   path: string,
   resourceName: string,
-  signal?: AbortSignal,
+  options: {
+    method?: "GET" | "POST" | "DELETE";
+    body?: object;
+    signal?: AbortSignal;
+  } = {},
 ): Promise<T> {
   let response: Response;
 
   try {
     response = await fetch(`${apiBaseUrl}${path}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
+      method: options.method ?? "GET",
+      headers: {
+        Accept: "application/json",
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
       cache: "no-store",
-      signal,
+      signal: options.signal,
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
@@ -78,7 +91,7 @@ export function getDashboardOverview(
   return requestJson<DashboardOverviewResponse>(
     "/api/v1/dashboard/overview",
     "the dashboard",
-    signal,
+    { signal },
   );
 }
 
@@ -94,7 +107,7 @@ export function searchCompanies(
   return requestJson<CompanySearchResponse>(
     `/api/v1/companies/search?${params.toString()}`,
     "company search results",
-    signal,
+    { signal },
   );
 }
 
@@ -105,7 +118,7 @@ export function getCompanyProfile(
   return requestJson<CompanyProfileResponse>(
     `/api/v1/companies/${encodeURIComponent(ticker)}`,
     `${ticker} company data`,
-    signal,
+    { signal },
   );
 }
 
@@ -120,7 +133,7 @@ export function getCompanyFilings(
   return requestJson<CompanyFilingsResponse>(
     `/api/v1/companies/${encodeURIComponent(ticker)}/filings?${params.toString()}`,
     `${ticker} filing history`,
-    signal,
+    { signal },
   );
 }
 
@@ -131,6 +144,34 @@ export function getCompanyFundamentals(
   return requestJson<CompanyFundamentalsResponse>(
     `/api/v1/companies/${encodeURIComponent(ticker)}/fundamentals`,
     `${ticker} fundamentals`,
+    { signal },
+  );
+}
+
+export function getWatchlist(signal?: AbortSignal): Promise<WatchlistResponse> {
+  return requestJson<WatchlistResponse>("/api/v1/watchlist", "the watchlist", {
     signal,
+  });
+}
+
+export function addWatchlistEntry(
+  ticker: string,
+  signal?: AbortSignal,
+): Promise<WatchlistEntry> {
+  return requestJson<WatchlistEntry>("/api/v1/watchlist", "the watchlist", {
+    method: "POST",
+    body: { ticker },
+    signal,
+  });
+}
+
+export function deleteWatchlistEntry(
+  ticker: string,
+  signal?: AbortSignal,
+): Promise<WatchlistDeleteResponse> {
+  return requestJson<WatchlistDeleteResponse>(
+    `/api/v1/watchlist/${encodeURIComponent(ticker)}`,
+    "the watchlist",
+    { method: "DELETE", signal },
   );
 }
