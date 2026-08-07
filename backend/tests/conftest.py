@@ -24,6 +24,15 @@ def msft_submissions_payload() -> dict[str, Any]:
 
 
 @pytest.fixture
+def msft_company_facts_payload() -> dict[str, Any]:
+    return json.loads(
+        (FIXTURE_DIRECTORY / "company_facts_msft.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+
+@pytest.fixture
 def anyio_backend() -> str:
     """Run async tests on the asyncio backend already used by FastAPI."""
 

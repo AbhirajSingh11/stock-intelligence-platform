@@ -1,6 +1,7 @@
 import type { DashboardOverviewResponse } from "@/types/dashboard";
 import type {
   CompanyFilingsResponse,
+  CompanyFundamentalsResponse,
   CompanyProfileResponse,
   CompanySearchResponse,
 } from "@/types/company";
@@ -119,6 +120,17 @@ export function getCompanyFilings(
   return requestJson<CompanyFilingsResponse>(
     `/api/v1/companies/${encodeURIComponent(ticker)}/filings?${params.toString()}`,
     `${ticker} filing history`,
+    signal,
+  );
+}
+
+export function getCompanyFundamentals(
+  ticker: string,
+  signal?: AbortSignal,
+): Promise<CompanyFundamentalsResponse> {
+  return requestJson<CompanyFundamentalsResponse>(
+    `/api/v1/companies/${encodeURIComponent(ticker)}/fundamentals`,
+    `${ticker} fundamentals`,
     signal,
   );
 }

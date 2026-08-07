@@ -51,6 +51,7 @@ def test_sec_settings_use_safe_defaults(
         "SEC_READ_TIMEOUT_SECONDS",
         "SEC_TICKER_CACHE_TTL_SECONDS",
         "SEC_SUBMISSIONS_CACHE_TTL_SECONDS",
+        "SEC_COMPANY_FACTS_CACHE_TTL_SECONDS",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -60,6 +61,7 @@ def test_sec_settings_use_safe_defaults(
     assert settings.requests_per_second == MAX_SEC_REQUESTS_PER_SECOND
     assert settings.ticker_cache_ttl_seconds == 86_400
     assert settings.submissions_cache_ttl_seconds == 900
+    assert settings.company_facts_cache_ttl_seconds == 900
 
 
 def test_sec_settings_reject_rate_above_application_maximum(

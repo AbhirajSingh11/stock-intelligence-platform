@@ -20,6 +20,7 @@ class SecSettings:
     read_timeout_seconds: float
     ticker_cache_ttl_seconds: float
     submissions_cache_ttl_seconds: float
+    company_facts_cache_ttl_seconds: float
     max_retries: int = 2
 
 
@@ -96,6 +97,10 @@ def get_sec_settings() -> SecSettings:
         ),
         submissions_cache_ttl_seconds=_positive_float(
             "SEC_SUBMISSIONS_CACHE_TTL_SECONDS",
+            900.0,
+        ),
+        company_facts_cache_ttl_seconds=_positive_float(
+            "SEC_COMPANY_FACTS_CACHE_TTL_SECONDS",
             900.0,
         ),
     )

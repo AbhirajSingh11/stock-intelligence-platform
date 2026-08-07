@@ -39,6 +39,7 @@ def sec_settings() -> SecSettings:
         read_timeout_seconds=1,
         ticker_cache_ttl_seconds=86_400,
         submissions_cache_ttl_seconds=900,
+        company_facts_cache_ttl_seconds=900,
         max_retries=2,
     )
 
@@ -115,6 +116,33 @@ async def test_concurrent_cache_misses_share_one_request(
 
     assert first == second
     assert call_count == 1
+
+
+@pytest.mark.anyio
+async def test_company_facts_cik_padding_cache_and_coalescing(
+    msft_company_facts_payload: dict[str, Any],
+) -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=msft_company_facts_payload)
+
+    client, http_client = await build_client(handler)
+    try:
+        first, second = await asyncio.gather(
+            client.get_company_facts(789019),
+            client.get_company_facts("0000789019"),
+        )
+        third = await client.get_company_facts(789019)
+    finally:
+        await http_client.aclose()
+
+    assert first == second == third
+    assert len(requests) == 1
+    assert str(requests[0].url).endswith(
+        "/api/xbrl/companyfacts/CIK0000789019.json"
+    )
 
 
 @pytest.mark.anyio

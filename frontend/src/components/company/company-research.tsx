@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { CompanyError, CompanyLoading } from "./company-states";
+import { CompanyFinancials } from "./company-financials";
 import { getCompanyFilings, getCompanyProfile } from "@/lib/api/client";
 import { formatFiscalYearEnd, formatSecDate } from "@/lib/formatters";
 import type {
@@ -221,6 +222,8 @@ function CompanyContent({ data }: { data: CompanyData }) {
           </ul>
         </section>
       ) : null}
+
+      <CompanyFinancials ticker={profile.ticker} />
 
       <section className="border border-border bg-panel">
         <div className="flex flex-col gap-2 border-b border-border p-5 sm:flex-row sm:items-end sm:justify-between">

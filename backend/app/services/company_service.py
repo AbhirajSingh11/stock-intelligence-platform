@@ -38,6 +38,9 @@ class CompanyDataSource(Protocol):
     async def get_company_submissions(self, cik: str | int) -> dict[str, Any]:
         """Return official SEC submissions for one CIK."""
 
+    async def get_company_facts(self, cik: str | int) -> dict[str, Any]:
+        """Return official SEC Company Facts for one CIK."""
+
 
 def normalize_ticker(ticker: str) -> str:
     normalized = ticker.strip().upper()
@@ -79,6 +82,11 @@ class CompanyService:
 
     def __init__(self, sec_client: CompanyDataSource) -> None:
         self._sec_client = sec_client
+
+    async def resolve_company(self, ticker: str) -> CompanySearchResult:
+        """Resolve a public ticker to the SEC's normalized identity record."""
+
+        return await self._find_company(normalize_ticker(ticker))
 
     async def search_companies(
         self,

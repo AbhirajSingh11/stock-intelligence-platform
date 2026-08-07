@@ -43,6 +43,21 @@ const secDateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+const utcMonthNames = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
 function parseIsoDate(date: string): Date {
   return new Date(`${date}T00:00:00Z`);
 }
@@ -96,6 +111,20 @@ export function formatSecDate(date: string): string {
   return secDateFormatter.format(parseIsoDate(date));
 }
 
+export function formatFinancialChartDate(date: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) {
+    return date;
+  }
+
+  const monthIndex = Number(match[2]) - 1;
+  if (monthIndex < 0 || monthIndex >= utcMonthNames.length) {
+    return date;
+  }
+
+  return `${utcMonthNames[monthIndex]} '${match[1].slice(-2)}`;
+}
+
 export function formatFiscalYearEnd(value: string | null): string {
   if (!value || !/^\d{4}$/.test(value)) {
     return "Not reported";
@@ -110,4 +139,33 @@ export function formatFiscalYearEnd(value: string | null): string {
   return secDateFormatter.format(
     new Date(Date.UTC(2024, month - 1, day)),
   ).replace(", 2024", "");
+}
+
+export function formatFundamentalValue(value: number, unit: string): string {
+  if (unit === "pure") {
+    return `${(value * 100).toFixed(1)}%`;
+  }
+  if (unit === "USD-per-shares") {
+    return `$${value.toFixed(2)}`;
+  }
+  if (unit === "USD") {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(value);
+  }
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+export function formatFiscalPeriod(
+  fiscalYear: number,
+  fiscalPeriod: string,
+): string {
+  return fiscalPeriod === "FY"
+    ? `FY ${fiscalYear}`
+    : `FY ${fiscalYear} ${fiscalPeriod}`;
 }

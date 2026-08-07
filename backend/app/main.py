@@ -10,11 +10,13 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes.companies import router as companies_router
 from app.api.routes.dashboard import router as dashboard_router
+from app.api.routes.fundamentals import router as fundamentals_router
 from app.clients.sec_edgar import SecEdgarClient, build_sec_http_client
 from app.config import get_cors_origins, get_sec_settings
 from app.exceptions import ApplicationError
 from app.schemas.system import HealthResponse, ServiceInfo
 from app.services.company_service import CompanyService
+from app.services.fundamentals_service import FundamentalsService
 
 
 @asynccontextmanager
@@ -24,11 +26,17 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     settings = get_sec_settings()
     sec_http_client = None
     application.state.company_service = None
+    application.state.fundamentals_service = None
 
     if settings.user_agent:
         sec_http_client = build_sec_http_client(settings)
         sec_client = SecEdgarClient(sec_http_client, settings)
-        application.state.company_service = CompanyService(sec_client)
+        company_service = CompanyService(sec_client)
+        application.state.company_service = company_service
+        application.state.fundamentals_service = FundamentalsService(
+            sec_client,
+            company_service,
+        )
 
     try:
         yield
@@ -40,7 +48,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title="Stock Intelligence API",
     description="Backend services for stock research and portfolio intelligence.",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
@@ -54,6 +62,7 @@ app.add_middleware(
 
 app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(companies_router, prefix="/api/v1")
+app.include_router(fundamentals_router, prefix="/api/v1")
 
 
 @app.exception_handler(ApplicationError)

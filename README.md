@@ -8,6 +8,8 @@ established the Next.js and FastAPI foundations. Milestone 2 adds a responsive
 frontend dashboard. Milestone 3 moves dashboard data ownership to FastAPI and
 establishes a typed frontend-to-backend data flow. Milestone 4 adds official
 SEC EDGAR company search, company profiles, and recent filing history.
+Milestone 5 adds normalized annual and quarterly company fundamentals from the
+official SEC Company Facts API.
 
 ## Technology
 
@@ -112,6 +114,10 @@ The Milestone 4 company endpoints are:
 - `GET /api/v1/companies/MSFT`
 - `GET /api/v1/companies/MSFT/filings?forms=10-K,10-Q,8-K&limit=20`
 
+The Milestone 5 fundamentals endpoint is:
+
+- `GET /api/v1/companies/MSFT/fundamentals`
+
 Search requires at least two non-whitespace characters. Search limits range
 from 1 to 20. Filing limits range from 1 to 100, and `forms` accepts up to ten
 unique comma-separated SEC form names.
@@ -167,22 +173,66 @@ characters. Results come from the SEC ticker mapping. Select a result with the
 mouse or the arrow keys and Enter to open `/companies/[ticker]`.
 
 Dashboard values remain deterministic, backend-owned mock data during
-Milestone 4. SEC data is used only for company search, company profiles, and
-recent filing history. There is still no database or market-data provider.
+Milestone 5. Official SEC data is used for company search, profiles, recent
+filing history, and standardized company fundamentals. There is still no
+database or market-data provider.
 
 ## SEC EDGAR Usage
 
 Company data is attributed to the
 [U.S. Securities and Exchange Commission](https://www.sec.gov/edgar/sec-api-documentation).
-The backend calls only the official SEC ticker mapping and submissions JSON
-endpoints. Filing links lead directly to `sec.gov`.
+The backend calls only the official SEC ticker mapping, submissions JSON, and
+Company Facts JSON endpoints. Filing and fact-provenance links lead directly
+to `sec.gov`.
 
 The SEC allows no more than 10 requests per second. This application uses a
 stricter maximum of 5 requests per second, reuses one HTTP connection pool,
 and retries only a bounded number of transient failures. Successful ticker
-mapping responses are cached in memory for 24 hours; company submissions are
-cached for 15 minutes. Concurrent cache misses are coalesced. The cache is
+mapping responses are cached in memory for 24 hours; company submissions and
+Company Facts are cached for 15 minutes. Concurrent cache misses are
+coalesced. One Company Facts response supplies every supported metric for a
+company; the backend does not make one SEC request per metric. The cache is
 local to the FastAPI process and resets when that process restarts.
+
+### Standardized Fundamentals
+
+Milestone 5 supports revenue, operating income, net income, diluted EPS, cash
+and cash equivalents, long-term debt, operating margin, and net margin. A
+central registry records each metric's accepted taxonomy, tags, unit, fact
+type, forms, and any permitted formula.
+
+Primary revenue uses
+`RevenueFromContractWithCustomerExcludingAssessedTax`; `Revenues` and
+`SalesRevenueNet` are ordered fallbacks. Net income uses `NetIncomeLoss`, with
+`ProfitLoss` as a fallback. Long-term debt uses `LongTermDebt` directly when
+available. Its only derived fallback is the exact sum of
+`LongTermDebtCurrent` and `LongTermDebtNoncurrent` from the same period and
+filing. It does not combine leases, short-term borrowings, total liabilities,
+or unrelated debt concepts. Operating and net margins are derived only when
+the numerator and revenue share exact period boundaries and filing
+provenance.
+
+Annual duration series accept fiscal-year 10-K or 10-K/A observations with a
+defensible annual duration. Quarterly duration series accept only 10-Q or
+10-Q/A observations explicitly framed by the SEC as a discrete quarter;
+unframed year-to-date values are rejected, and Q4 is not invented from annual
+data. Instant facts are deduplicated by period end and may come from 10-Q or
+10-K filings. Series retain at most five annual and eight quarterly periods.
+Values selected from amended filings, fallback concepts, or formulas are
+identified in the response and UI.
+
+Missing, malformed, incompatible-unit, or unsupported concepts produce an
+unavailable metric or data-quality warning rather than a fabricated zero.
+Every returned fact includes its taxonomy tag, accession number, filing date,
+and direct SEC filing URL. The response also links to the original Company
+Facts resource.
+
+Standardized XBRL still has important limitations: companies may choose
+different concepts, historical taxonomy usage can change, SEC frames are not
+available for every observation, fiscal calendars do not always align to
+calendar quarters, and amended filings can restate earlier values. The
+normalizer intentionally returns gaps when it cannot establish compatible
+units, periods, or provenance.
 
 The backend pins `httpx==0.28.1` because the SEC integration needs an
 asynchronous HTTP client with connection pooling, separate timeouts, and a
@@ -212,8 +262,9 @@ Set-Location .\backend
 - [x] Milestone 2: responsive frontend dashboard with typed static mock data
 - [x] Milestone 3: typed FastAPI-to-frontend dashboard data flow
 - [x] Milestone 4: SEC EDGAR company search, profiles, and recent filings
+- [x] Milestone 5: SEC Company Facts financial trends and provenance
 - [ ] Watchlist and market-data milestones
 - [ ] Portfolio transactions and return calculations
-- [ ] Fundamental analysis and SEC filing retrieval
+- [ ] Deeper fundamental analysis and SEC filing-document retrieval
 - [ ] Thesis tracking and evidence comparison
 - [ ] Valuation scenarios and local AI-assisted analysis

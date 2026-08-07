@@ -21,6 +21,9 @@ COMPANY_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 SUBMISSIONS_URL_TEMPLATE = (
     "https://data.sec.gov/submissions/CIK{cik}.json"
 )
+COMPANY_FACTS_URL_TEMPLATE = (
+    "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+)
 TRANSIENT_STATUS_CODES = frozenset({500, 502, 503, 504})
 
 
@@ -80,7 +83,7 @@ def build_sec_http_client(
 
 
 class SecEdgarClient:
-    """Fetch and cache the two official SEC data sources used in Milestone 4."""
+    """Fetch and cache official SEC JSON resources for company research."""
 
     def __init__(
         self,
@@ -102,8 +105,12 @@ class SecEdgarClient:
         self._submissions_cache = TtlCache[dict[str, Any]](
             settings.submissions_cache_ttl_seconds
         )
+        self._company_facts_cache = TtlCache[dict[str, Any]](
+            settings.company_facts_cache_ttl_seconds
+        )
         self._ticker_lock = asyncio.Lock()
         self._submissions_lock = asyncio.Lock()
+        self._company_facts_lock = asyncio.Lock()
 
     async def get_company_tickers(self) -> dict[str, Any]:
         cached = self._ticker_cache.get("company_tickers")
@@ -122,9 +129,7 @@ class SecEdgarClient:
             return payload
 
     async def get_company_submissions(self, cik: str | int) -> dict[str, Any]:
-        normalized_cik = str(cik).strip().zfill(10)
-        if len(normalized_cik) != 10 or not normalized_cik.isdigit():
-            raise SecMalformedResponseError()
+        normalized_cik = self._normalize_cik(cik)
 
         cached = self._submissions_cache.get(normalized_cik)
         if cached is not None:
@@ -142,6 +147,34 @@ class SecEdgarClient:
                 raise SecMalformedResponseError()
             self._submissions_cache.set(normalized_cik, payload)
             return payload
+
+    async def get_company_facts(self, cik: str | int) -> dict[str, Any]:
+        """Return all standardized XBRL concepts for one company."""
+
+        normalized_cik = self._normalize_cik(cik)
+        cached = self._company_facts_cache.get(normalized_cik)
+        if cached is not None:
+            return cached
+
+        async with self._company_facts_lock:
+            cached = self._company_facts_cache.get(normalized_cik)
+            if cached is not None:
+                return cached
+
+            payload = await self._get_json(
+                COMPANY_FACTS_URL_TEMPLATE.format(cik=normalized_cik)
+            )
+            if not isinstance(payload, dict):
+                raise SecMalformedResponseError()
+            self._company_facts_cache.set(normalized_cik, payload)
+            return payload
+
+    @staticmethod
+    def _normalize_cik(cik: str | int) -> str:
+        normalized_cik = str(cik).strip().zfill(10)
+        if len(normalized_cik) != 10 or not normalized_cik.isdigit():
+            raise SecMalformedResponseError()
+        return normalized_cik
 
     async def _get_json(self, url: str) -> dict[str, Any]:
         for attempt in range(self._max_retries + 1):
