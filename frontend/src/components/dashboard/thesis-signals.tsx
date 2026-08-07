@@ -1,64 +1,11 @@
-import type { SignalTone, ThesisSignal } from "@/types/dashboard";
-import { formatReviewedDate } from "@/lib/formatters";
+import Link from "next/link";
 
-interface ThesisSignalsProps {
-  signals: ThesisSignal[];
-}
+import { SignalBadge } from "@/components/thesis/thesis-badges";
+import { formatSecDate, formatUtcTimestamp } from "@/lib/formatters";
+import type { ThesisSummary } from "@/types/thesis";
 
-const toneStyles: Record<SignalTone, string> = {
-  positive: "border-positive/30 bg-positive/10 text-positive",
-  warning: "border-warning/30 bg-warning/10 text-warning",
-  neutral: "border-secondary/30 bg-secondary/10 text-secondary",
-};
-
-export function ThesisSignals({ signals }: ThesisSignalsProps) {
-  return (
-    <section
-      className="border border-border bg-panel"
-      aria-labelledby="thesis-signals-heading"
-    >
-      <div className="border-b border-border p-4 sm:p-5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-secondary">
-          Evidence monitor
-        </p>
-        <h2
-          id="thesis-signals-heading"
-          className="mt-2 text-base font-semibold text-foreground"
-        >
-          Thesis signals
-        </h2>
-      </div>
-
-      <ul className="divide-y divide-border">
-        {signals.map((signal) => (
-          <li key={signal.ticker} className="p-4 sm:p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {signal.company}
-                </p>
-                <p className="mt-1 font-mono text-[10px] text-secondary">
-                  {signal.ticker}
-                </p>
-              </div>
-              <span
-                className={`shrink-0 border px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-wide ${toneStyles[signal.tone]}`}
-              >
-                {signal.state}
-              </span>
-            </div>
-            <p className="mt-4 text-[11px] text-secondary">
-              Last reviewed{" "}
-              <time
-                dateTime={signal.last_reviewed}
-                className="financial-figure font-mono text-foreground/80"
-              >
-                {formatReviewedDate(signal.last_reviewed)}
-              </time>
-            </p>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
+export function ThesisSignals({ signals }: { signals: ThesisSummary[] }) {
+  return <section className="border border-border bg-panel" aria-labelledby="thesis-signals-heading"><div className="flex items-end justify-between gap-3 border-b border-border p-4 sm:p-5"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-secondary">Evidence monitor</p><h2 id="thesis-signals-heading" className="mt-2 text-base font-semibold text-foreground">Thesis signals</h2></div><Link href="/thesis" className="font-mono text-[9px] font-semibold uppercase tracking-wider text-positive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-positive">Journal →</Link></div>
+    {signals.length === 0 ? <div className="p-5"><p className="text-sm text-secondary">No active thesis signals yet.</p><Link href="/thesis" className="mt-4 inline-block border border-positive px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-positive outline-none hover:bg-positive/10 focus-visible:ring-2 focus-visible:ring-positive">Create thesis</Link></div> : <ul className="divide-y divide-border">{signals.map((thesis) => <li key={thesis.id}><Link href={`/thesis/${encodeURIComponent(thesis.ticker)}`} className="block p-4 outline-none hover:bg-white/[0.02] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-positive sm:p-5"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-medium text-foreground">{thesis.company_name}</p><p className="mt-1 font-mono text-[10px] text-secondary">{thesis.ticker}</p></div><SignalBadge signal={thesis.signal} /></div><p className="mt-3 line-clamp-2 text-xs leading-5 text-secondary">{thesis.title}</p><p className={`mt-3 font-mono text-[9px] ${thesis.is_overdue ? "text-warning" : "text-secondary"}`}>{thesis.is_overdue && thesis.review_due_date ? `Overdue since ${formatSecDate(thesis.review_due_date)}` : thesis.last_reviewed_at ? `Reviewed ${formatUtcTimestamp(thesis.last_reviewed_at)}` : thesis.review_due_date ? `Due ${formatSecDate(thesis.review_due_date)}` : "Not yet reviewed"}</p></Link></li>)}</ul>}
+  </section>;
 }

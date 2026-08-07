@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { CompanyError, CompanyLoading } from "./company-states";
 import { CompanyFinancials } from "./company-financials";
 import { CompanyWatchlistControl } from "./company-watchlist-control";
+import { CompanyThesisSummary } from "./company-thesis-summary";
 import { getCompanyFilings, getCompanyProfile } from "@/lib/api/client";
 import { formatFiscalYearEnd, formatSecDate } from "@/lib/formatters";
 import type {
@@ -201,6 +202,8 @@ function CompanyContent({ data }: { data: CompanyData }) {
         <AddressPanel title="Business address" address={profile.business_address} />
         <AddressPanel title="Mailing address" address={profile.mailing_address} />
       </div>
+
+      <CompanyThesisSummary ticker={profile.ticker} />
 
       {profile.former_names.length > 0 ? (
         <section className="border border-border bg-panel p-5">

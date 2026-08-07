@@ -25,7 +25,7 @@ export default function DashboardPage() {
         <footer className="border-t border-border px-4 py-4 sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-[1500px] flex-col gap-1 font-mono text-[9px] uppercase tracking-wider text-secondary sm:flex-row sm:items-center sm:justify-between">
             <span>Stock Intelligence · Local research environment</span>
-            <span>Persisted portfolio · Mock thesis signals</span>
+            <span>Persisted portfolio · Persisted thesis signals</span>
           </div>
         </footer>
       </div>

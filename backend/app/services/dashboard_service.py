@@ -1,11 +1,18 @@
 """Dashboard application service."""
 
-from app.data.mock_dashboard import MOCK_DASHBOARD_OVERVIEW
+from datetime import datetime, timezone
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.schemas.dashboard import DashboardOverview
+from app.services.thesis_service import ThesisService
 
 
-def get_dashboard_overview() -> DashboardOverview:
-    """Validate and return the backend-owned dashboard snapshot."""
+async def get_dashboard_overview(session: AsyncSession) -> DashboardOverview:
+    """Return persisted thesis priorities for the portfolio dashboard."""
 
-    return DashboardOverview.model_validate(MOCK_DASHBOARD_OVERVIEW)
-
+    service = ThesisService(session)
+    return DashboardOverview(
+        as_of=datetime.now(timezone.utc),
+        thesis_signals=await service.dashboard_theses(limit=5),
+    )

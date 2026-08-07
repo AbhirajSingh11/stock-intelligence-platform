@@ -18,7 +18,7 @@ import type {
   PortfolioTransactionUpdate,
 } from "@/types/portfolio";
 import { PortfolioSummary } from "@/components/dashboard/portfolio-summary";
-import { ConfirmationDialog } from "./confirmation-dialog";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { PortfolioPositions } from "./portfolio-positions";
 import { PortfolioLoadError, PortfolioLoading } from "./portfolio-states";
 import { TransactionForm } from "./transaction-form";

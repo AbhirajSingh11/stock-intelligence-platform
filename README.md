@@ -14,6 +14,9 @@ state: a single-user watchlist stored locally in SQLite through SQLAlchemy and
 versioned Alembic migrations. Milestone 7 adds persistent buy/sell
 transactions, Decimal-based weighted-average accounting, manual price marks,
 and real portfolio intelligence on both `/portfolio` and the dashboard.
+Milestone 8 adds persistent investment theses, explicit review scheduling,
+user-entered evidence, and a thesis journal integrated with company research
+and the dashboard.
 
 ## Technology
 
@@ -142,6 +145,24 @@ The Milestone 7 portfolio endpoints are:
 - `DELETE /api/v1/portfolio/transactions/{transaction_id}`
 - `PUT /api/v1/portfolio/marks/{ticker}`
 
+The Milestone 8 thesis endpoints are:
+
+- `GET /api/v1/theses` with optional `ticker`, `status`, `signal`, and
+  `overdue` query filters
+- `POST /api/v1/theses`
+- `GET /api/v1/theses/{ticker}`
+- `PATCH /api/v1/theses/{ticker}`
+- `DELETE /api/v1/theses/{ticker}`
+- `POST /api/v1/theses/{ticker}/review`
+- `POST /api/v1/theses/{ticker}/evidence`
+- `PATCH /api/v1/theses/{ticker}/evidence/{evidence_id}`
+- `DELETE /api/v1/theses/{ticker}/evidence/{evidence_id}`
+
+Only thesis creation resolves the official ticker, ten-digit CIK, and company
+name through the SEC mapping. The stored identity is reused afterward. A
+ticker has at most one thesis. Source URLs are optional HTTP(S) references;
+the backend stores but never fetches them.
+
 Transaction creates accept `ticker`, `side`, `trade_date`, `quantity`,
 `price_per_share`, `fees`, and optional `notes`. The first transaction for a
 security resolves its official ticker, ten-digit CIK, and company name through
@@ -222,9 +243,10 @@ mouse or the arrow keys and Enter to open `/companies/[ticker]`.
 Portfolio values now come from the persisted transaction ledger and manual
 price marks. The former mock portfolio summary and mock performance history
 have been removed; without historical prices, the application does not claim
-historical portfolio performance. Thesis signals remain deterministic,
-backend-owned mock data during Milestone 7. The watchlist remains stored in
-SQLite and is loaded through its own API.
+historical portfolio performance. Thesis signals now come from persisted
+theses. The dashboard shows at most five review priorities: overdue active or
+draft theses first, then review-required theses, then recent active research.
+The watchlist remains stored in SQLite and is loaded through its own API.
 Official SEC data is used for company search, profiles, recent filing history,
 standardized company fundamentals, and watchlist identity validation. There is
 still no market-data provider. Watchlist cards do not claim prices or position
@@ -260,7 +282,7 @@ New-Item -ItemType Directory -Force .\backups
 Copy-Item .\data\stock-intelligence.db .\backups\stock-intelligence-$(Get-Date -Format yyyyMMdd-HHmmss).db
 ```
 
-The copied file contains both watchlist and portfolio records. Keep backups
+The copied file contains watchlist, portfolio, thesis, and evidence records. Keep backups
 outside the repository if they contain sensitive personal information.
 
 To intentionally reset only the default local development database, first
@@ -274,13 +296,14 @@ Remove-Item -LiteralPath .\data\stock-intelligence.db-wal -ErrorAction SilentlyC
 .\.venv\Scripts\python.exe -m alembic upgrade head
 ```
 
-This permanently removes the local watchlist, transactions, and manual price
-marks. Migrations and test fixtures are versioned and are not deleted.
+This permanently removes the local watchlist, transactions, manual price
+marks, theses, and evidence. Migrations and test fixtures are versioned and are
+not deleted.
 Automated tests override `DATABASE_URL` with a fresh SQLite file under pytest's
 temporary directory, migrate it, and release all connections during cleanup;
 they never use the developer database.
 
-Milestone 7 is explicitly single-user and unauthenticated. A future PostgreSQL
+Milestone 8 is explicitly single-user and unauthenticated. A future PostgreSQL
 migration should preserve the API, service, repository, and typed model
 boundaries; it will require a PostgreSQL async driver, a PostgreSQL
 `DATABASE_URL`, and review of migration/database-specific constraints. No
@@ -323,6 +346,31 @@ Everything in this milestone runs locally using free software and free SEC
 data. There is no paid API, hosted service, brokerage connection, or live-price
 dependency.
 
+### Thesis Journal and Evidence
+
+Migration `0003` adds `investment_theses` and `thesis_evidence`. Apply it to an
+existing Milestone 7 database with the same non-destructive upgrade command:
+
+```powershell
+Set-Location .\backend
+.\.venv\Scripts\python.exe -m alembic upgrade head
+```
+
+Each ticker can have one thesis with a draft, active, invalidated, or archived
+status; low, medium, or high conviction; and a manually chosen signal. The
+application does not infer or change conviction or signal from evidence.
+Evidence is explicitly labeled supporting, contradicting, or neutral and is
+ordered by observation date, creation time, then ID. Deleting a thesis
+permanently cascades to its evidence.
+
+Selecting **Mark reviewed** records the backend's current UTC timestamp and
+can set or clear the next due date. It does not change conviction or signal. A
+thesis is overdue only when its due date is before the current UTC date and its
+status is draft or active. All thesis content and evidence are user-entered,
+stored in the local SQLite database, and remain on this machine. There is no AI
+analysis, news feed, scraping, authentication, or external thesis service in
+Milestone 8.
+
 ### Manual Persistence Check
 
 1. Start FastAPI and Next.js in the order above.
@@ -332,6 +380,9 @@ dependency.
 5. Confirm Microsoft remains, then remove it and verify the empty state.
 6. Open `/portfolio`, record a buy, add a manual price, restart FastAPI, and
    confirm the transaction, calculated position, and manual mark remain.
+7. Open `/thesis`, create a thesis and evidence item, restart FastAPI, and
+   confirm both remain. Mark it reviewed and confirm its manual signal does not
+   change.
 
 ## SEC EDGAR Usage
 
@@ -394,6 +445,7 @@ The backend pins `httpx==0.28.1` because the SEC integration needs an
 asynchronous HTTP client with connection pooling, separate timeouts, and a
 mockable transport. Milestone 6 adds `SQLAlchemy==2.0.51`, `alembic==1.18.5`,
 and `aiosqlite==0.22.1`. Milestone 7 adds no backend or frontend dependency.
+Milestone 8 also adds no backend or frontend dependency.
 
 ## Validation Commands
 
@@ -422,7 +474,8 @@ Set-Location .\backend
 - [x] Milestone 5: SEC Company Facts financial trends and provenance
 - [x] Milestone 6: local SQLite persistence and a real watchlist
 - [x] Milestone 7: persistent portfolio transactions and position intelligence
+- [x] Milestone 8: persistent investment theses and evidence tracking
 - [ ] Market-data integration
 - [ ] Deeper fundamental analysis and SEC filing-document retrieval
-- [ ] Thesis tracking and evidence comparison
+- [ ] Automated evidence comparison and local AI-assisted analysis
 - [ ] Valuation scenarios and local AI-assisted analysis

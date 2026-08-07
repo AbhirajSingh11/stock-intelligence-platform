@@ -21,6 +21,18 @@ import type {
   PortfolioTransactionsResponse,
   PortfolioTransactionUpdate,
 } from "@/types/portfolio";
+import type {
+  EvidenceDeleteResponse,
+  EvidenceInput,
+  EvidenceUpdateInput,
+  ThesisCreateInput,
+  ThesisDeleteResponse,
+  ThesisDetail,
+  ThesisListResponse,
+  ThesisSignal,
+  ThesisStatus,
+  ThesisUpdateInput,
+} from "@/types/thesis";
 
 const defaultApiBaseUrl = "http://127.0.0.1:8000";
 
@@ -244,4 +256,54 @@ export function setPortfolioPriceMark(
     "the manual portfolio price",
     { method: "PUT", body: input },
   );
+}
+
+export function getTheses(
+  filters: {
+    ticker?: string;
+    status?: ThesisStatus;
+    signal?: ThesisSignal;
+    overdue?: boolean;
+  } = {},
+  signal?: AbortSignal,
+): Promise<ThesisListResponse> {
+  const params = new URLSearchParams();
+  if (filters.ticker) params.set("ticker", filters.ticker);
+  if (filters.status) params.set("status", filters.status);
+  if (filters.signal) params.set("signal", filters.signal);
+  if (filters.overdue !== undefined) params.set("overdue", String(filters.overdue));
+  const query = params.size > 0 ? `?${params.toString()}` : "";
+  return requestJson<ThesisListResponse>(`/api/v1/theses${query}`, "the thesis journal", { signal });
+}
+
+export function getThesis(ticker: string, signal?: AbortSignal): Promise<ThesisDetail> {
+  return requestJson<ThesisDetail>(`/api/v1/theses/${encodeURIComponent(ticker)}`, `${ticker} thesis`, { signal });
+}
+
+export function createThesis(input: ThesisCreateInput): Promise<ThesisDetail> {
+  return requestJson<ThesisDetail>("/api/v1/theses", "the investment thesis", { method: "POST", body: input });
+}
+
+export function updateThesis(ticker: string, input: ThesisUpdateInput): Promise<ThesisDetail> {
+  return requestJson<ThesisDetail>(`/api/v1/theses/${encodeURIComponent(ticker)}`, `${ticker} thesis`, { method: "PATCH", body: input });
+}
+
+export function deleteThesis(ticker: string): Promise<ThesisDeleteResponse> {
+  return requestJson<ThesisDeleteResponse>(`/api/v1/theses/${encodeURIComponent(ticker)}`, `${ticker} thesis`, { method: "DELETE" });
+}
+
+export function markThesisReviewed(ticker: string, reviewDueDate: string | null): Promise<ThesisDetail> {
+  return requestJson<ThesisDetail>(`/api/v1/theses/${encodeURIComponent(ticker)}/review`, `${ticker} review`, { method: "POST", body: { review_due_date: reviewDueDate } });
+}
+
+export function addThesisEvidence(ticker: string, input: EvidenceInput): Promise<ThesisDetail> {
+  return requestJson<ThesisDetail>(`/api/v1/theses/${encodeURIComponent(ticker)}/evidence`, `${ticker} evidence`, { method: "POST", body: input });
+}
+
+export function updateThesisEvidence(ticker: string, evidenceId: number, input: EvidenceUpdateInput): Promise<ThesisDetail> {
+  return requestJson<ThesisDetail>(`/api/v1/theses/${encodeURIComponent(ticker)}/evidence/${evidenceId}`, `${ticker} evidence`, { method: "PATCH", body: input });
+}
+
+export function deleteThesisEvidence(ticker: string, evidenceId: number): Promise<EvidenceDeleteResponse> {
+  return requestJson<EvidenceDeleteResponse>(`/api/v1/theses/${encodeURIComponent(ticker)}/evidence/${evidenceId}`, `${ticker} evidence`, { method: "DELETE" });
 }

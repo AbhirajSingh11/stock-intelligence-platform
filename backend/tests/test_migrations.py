@@ -52,6 +52,22 @@ def test_portfolio_migration_upgrades_from_milestone_6_and_is_reversible(
     assert "portfolio_price_marks" in _table_names(isolated_database_url)
 
 
+def test_thesis_migration_upgrades_from_milestone_7_and_is_reversible(
+    isolated_database_url: str,
+) -> None:
+    config = Config(str(BACKEND_DIRECTORY / "alembic.ini"))
+    command.upgrade(config, "0002")
+    assert "investment_theses" not in _table_names(isolated_database_url)
+
+    command.upgrade(config, "head")
+    assert _table_names(isolated_database_url) >= {"investment_theses", "thesis_evidence"}
+
+    command.downgrade(config, "0002")
+    assert "investment_theses" not in _table_names(isolated_database_url)
+    assert "thesis_evidence" not in _table_names(isolated_database_url)
+    assert "portfolio_transactions" in _table_names(isolated_database_url)
+
+
 @pytest.mark.anyio
 async def test_database_disposal_releases_sqlite_file(
     isolated_database_url: str,

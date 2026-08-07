@@ -98,3 +98,21 @@ class PortfolioLedgerConflictError(ApplicationError):
         "This change would sell more shares than are available at that point "
         "in the transaction history."
     )
+
+
+class ThesisExistsError(ApplicationError):
+    status_code = 409
+    code = "thesis_exists"
+    default_message = "An investment thesis already exists for that ticker."
+
+
+class ThesisNotFoundError(ApplicationError):
+    status_code = 404
+    code = "thesis_not_found"
+    default_message = "No investment thesis exists for that ticker."
+
+
+class ThesisEvidenceNotFoundError(ApplicationError):
+    status_code = 404
+    code = "thesis_evidence_not_found"
+    default_message = "That evidence item does not belong to this thesis."

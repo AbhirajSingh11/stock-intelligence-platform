@@ -36,9 +36,11 @@ class FixtureSecClient:
 
 @pytest.fixture
 def api_client(
+    migrated_database_url: str,
     company_tickers_payload: dict[str, Any],
     msft_submissions_payload: dict[str, Any],
 ) -> Iterator[TestClient]:
+    del migrated_database_url
     service = CompanyService(
         FixtureSecClient(
             company_tickers_payload,

@@ -65,6 +65,10 @@ export function formatReviewedDate(date: string): string {
   return reviewedDateFormatter.format(parseIsoDate(date));
 }
 
+export function formatUtcTimestamp(timestamp: string): string {
+  return asOfFormatter.format(new Date(timestamp));
+}
+
 export function formatAsOf(timestamp: string): string {
   return asOfFormatter.format(new Date(timestamp));
 }

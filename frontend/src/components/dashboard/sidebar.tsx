@@ -16,7 +16,7 @@ const navigation: NavigationItem[] = [
   { label: "Watchlist", icon: "watchlist", href: "/watchlist" },
   { label: "Portfolio", icon: "portfolio", href: "/portfolio" },
   { label: "Filings", icon: "filings", href: null },
-  { label: "Thesis", icon: "thesis", href: "/#thesis" },
+  { label: "Thesis", icon: "thesis", href: "/thesis" },
 ];
 
 function Brand() {
@@ -53,7 +53,7 @@ function DesktopNavigation({ pathname }: NavigationProps) {
     <nav className="mt-8" aria-label="Primary navigation">
       <ul className="space-y-1">
         {navigation.map((item) => {
-          const isActive = item.href === pathname;
+          const isActive = item.href === pathname || (item.href !== "/" && item.href !== null && pathname.startsWith(`${item.href}/`));
 
           return (
             <li key={item.label}>
@@ -103,7 +103,7 @@ function MobileNavigation({ pathname }: NavigationProps) {
     >
       <ul className="flex min-w-max px-3">
         {navigation.map((item) => {
-          const isActive = item.href === pathname;
+          const isActive = item.href === pathname || (item.href !== "/" && item.href !== null && pathname.startsWith(`${item.href}/`));
 
           return (
             <li key={item.label}>
@@ -159,7 +159,7 @@ export function Sidebar() {
             Local system online
           </div>
           <p className="mt-2 text-[11px] leading-4 text-secondary">
-            Milestone 07 · Portfolio ledger
+            Milestone 08 · Thesis journal
           </p>
         </div>
       </aside>

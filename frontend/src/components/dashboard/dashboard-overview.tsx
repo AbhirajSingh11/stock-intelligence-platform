@@ -103,7 +103,7 @@ export function DashboardOverview() {
       <WatchlistGrid />
 
       <p className="text-right font-mono text-[9px] uppercase tracking-wider text-secondary">
-        {`Portfolio persisted locally · Thesis snapshot as of ${formatAsOf(data.as_of)}`}
+        {`Portfolio and theses persisted locally · Snapshot as of ${formatAsOf(data.as_of)}`}
       </p>
     </div>
   );
