@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from app.api.routes.companies import router as companies_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.fundamentals import router as fundamentals_router
+from app.api.routes.portfolio import router as portfolio_router
 from app.api.routes.watchlist import router as watchlist_router
 from app.clients.sec_edgar import SecEdgarClient, build_sec_http_client
 from app.config import get_cors_origins, get_database_url, get_sec_settings
@@ -53,7 +54,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title="Stock Intelligence API",
     description="Backend services for stock research and portfolio intelligence.",
-    version="0.6.0",
+    version="0.7.0",
     lifespan=lifespan,
 )
 
@@ -61,7 +62,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=get_cors_origins(),
     allow_credentials=False,
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],
     allow_headers=["Accept", "Content-Type"],
 )
 
@@ -69,6 +70,7 @@ app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(companies_router, prefix="/api/v1")
 app.include_router(fundamentals_router, prefix="/api/v1")
 app.include_router(watchlist_router, prefix="/api/v1")
+app.include_router(portfolio_router, prefix="/api/v1")
 
 
 @app.exception_handler(ApplicationError)

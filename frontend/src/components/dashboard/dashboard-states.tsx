@@ -25,8 +25,8 @@ export function DashboardLoading() {
           <SkeletonBlock className="h-3 w-32" />
           <SkeletonBlock className="h-3 w-24" />
         </div>
-        <div className="grid grid-cols-2 border-l border-t border-border xl:grid-cols-4">
-          {Array.from({ length: 4 }, (_, index) => (
+        <div className="grid grid-cols-2 border-l border-t border-border lg:grid-cols-3 2xl:grid-cols-6">
+          {Array.from({ length: 6 }, (_, index) => (
             <div
               key={index}
               className="border-b border-r border-border bg-panel p-4 sm:p-5"
@@ -113,4 +113,3 @@ export function DashboardError({ message, onRetry }: DashboardErrorProps) {
     </section>
   );
 }
-

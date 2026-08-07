@@ -23,19 +23,33 @@ def _table_names(database_url: str) -> set[str]:
         }
 
 
-def test_initial_migration_upgrade_downgrade_upgrade(
+def test_portfolio_migration_upgrades_from_milestone_6_and_is_reversible(
     isolated_database_url: str,
 ) -> None:
     config = Config(str(BACKEND_DIRECTORY / "alembic.ini"))
 
-    command.upgrade(config, "head")
-    assert "watchlist_entries" in _table_names(isolated_database_url)
+    command.upgrade(config, "0001")
+    assert _table_names(isolated_database_url) >= {
+        "alembic_version",
+        "watchlist_entries",
+    }
+    assert "portfolio_transactions" not in _table_names(isolated_database_url)
 
-    command.downgrade(config, "base")
-    assert "watchlist_entries" not in _table_names(isolated_database_url)
+    command.upgrade(config, "head")
+    assert _table_names(isolated_database_url) >= {
+        "watchlist_entries",
+        "portfolio_transactions",
+        "portfolio_price_marks",
+    }
+
+    command.downgrade(config, "0001")
+    assert "watchlist_entries" in _table_names(isolated_database_url)
+    assert "portfolio_transactions" not in _table_names(isolated_database_url)
+    assert "portfolio_price_marks" not in _table_names(isolated_database_url)
 
     command.upgrade(config, "head")
-    assert "watchlist_entries" in _table_names(isolated_database_url)
+    assert "portfolio_transactions" in _table_names(isolated_database_url)
+    assert "portfolio_price_marks" in _table_names(isolated_database_url)
 
 
 @pytest.mark.anyio

@@ -19,46 +19,9 @@ def test_dashboard_overview_has_expected_structure() -> None:
 
     assert set(payload) == {
         "as_of",
-        "currency",
-        "portfolio_summary",
-        "performance",
         "thesis_signals",
     }
     assert payload["as_of"] == "2026-07-28T20:00:00Z"
-    assert payload["currency"] == "USD"
-    assert set(payload["portfolio_summary"]) == {
-        "total_value",
-        "total_gain",
-        "total_return_percent",
-        "today_change",
-        "today_change_percent",
-        "position_count",
-    }
-
-
-def test_dashboard_overview_contains_representative_portfolio_values() -> None:
-    summary = client.get(DASHBOARD_URL).json()["portfolio_summary"]
-
-    assert summary["total_value"] == 24860.42
-    assert summary["total_gain"] == 2814.16
-    assert summary["total_return_percent"] == 12.8
-    assert summary["today_change"] == 184.32
-
-
-def test_dashboard_overview_contains_every_chart_period() -> None:
-    performance = client.get(DASHBOARD_URL).json()["performance"]
-
-    assert [series["period"] for series in performance] == [
-        "1M",
-        "3M",
-        "6M",
-        "1Y",
-        "ALL",
-    ]
-    assert all(series["points"] for series in performance)
-    assert all(
-        series["start_date"] <= series["end_date"] for series in performance
-    )
 
 
 def test_dashboard_overview_contains_thesis_data_without_mock_watchlist() -> None:
@@ -71,6 +34,8 @@ def test_dashboard_overview_contains_thesis_data_without_mock_watchlist() -> Non
     ]
     assert payload["thesis_signals"][1]["state"] == "Review required"
     assert "watchlist" not in payload
+    assert "portfolio_summary" not in payload
+    assert "performance" not in payload
 
 
 def test_dashboard_cors_allows_local_frontend_origin() -> None:

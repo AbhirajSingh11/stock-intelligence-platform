@@ -77,3 +77,24 @@ class WatchlistEntryNotFoundError(ApplicationError):
     status_code = 404
     code = "watchlist_entry_not_found"
     default_message = "That company is not on the watchlist."
+
+
+class PortfolioTransactionNotFoundError(ApplicationError):
+    status_code = 404
+    code = "portfolio_transaction_not_found"
+    default_message = "That portfolio transaction does not exist."
+
+
+class PortfolioSecurityNotFoundError(ApplicationError):
+    status_code = 404
+    code = "portfolio_security_not_found"
+    default_message = "That security does not exist in the portfolio ledger."
+
+
+class PortfolioLedgerConflictError(ApplicationError):
+    status_code = 409
+    code = "portfolio_ledger_conflict"
+    default_message = (
+        "This change would sell more shares than are available at that point "
+        "in the transaction history."
+    )

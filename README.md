@@ -11,15 +11,17 @@ SEC EDGAR company search, company profiles, and recent filing history.
 Milestone 5 adds normalized annual and quarterly company fundamentals from the
 official SEC Company Facts API. Milestone 6 adds the first durable application
 state: a single-user watchlist stored locally in SQLite through SQLAlchemy and
-versioned Alembic migrations.
+versioned Alembic migrations. Milestone 7 adds persistent buy/sell
+transactions, Decimal-based weighted-average accounting, manual price marks,
+and real portfolio intelligence on both `/portfolio` and the dashboard.
 
 ## Technology
 
 - **Frontend:** Next.js, TypeScript, Tailwind CSS
 - **Backend:** Python, FastAPI
 - **Database:** SQLite for local development; PostgreSQL is planned for a later milestone
-- **Data sources:** official, free SEC EDGAR JSON endpoints; market data comes
-  in a later milestone
+- **Data sources:** official, free SEC EDGAR JSON endpoints; portfolio prices
+  are entered manually because live market data remains out of scope
 
 All required tools and services must remain free.
 
@@ -131,6 +133,22 @@ The Milestone 6 watchlist endpoints are:
 - `POST /api/v1/watchlist` with JSON such as `{ "ticker": "MSFT" }`
 - `DELETE /api/v1/watchlist/MSFT`
 
+The Milestone 7 portfolio endpoints are:
+
+- `GET /api/v1/portfolio/overview`
+- `GET /api/v1/portfolio/transactions` with optional `?ticker=MSFT`
+- `POST /api/v1/portfolio/transactions`
+- `PATCH /api/v1/portfolio/transactions/{transaction_id}`
+- `DELETE /api/v1/portfolio/transactions/{transaction_id}`
+- `PUT /api/v1/portfolio/marks/{ticker}`
+
+Transaction creates accept `ticker`, `side`, `trade_date`, `quantity`,
+`price_per_share`, `fees`, and optional `notes`. The first transaction for a
+security resolves its official ticker, ten-digit CIK, and company name through
+the SEC company service. Later transactions reuse that stored identity. All
+financial values are serialized as exact decimal strings; dates and timestamps
+use ISO formats.
+
 Creates resolve the ticker through the official SEC mapping before storing its
 normalized ticker, ten-digit CIK, and official company name. A duplicate create
 returns `409 watchlist_entry_exists`; deleting an absent ticker returns
@@ -181,6 +199,11 @@ Uvicorn. The example also documents optional SEC timeout, rate, and cache settin
 Wildcard CORS origins are rejected, and the application will reject an SEC
 rate setting above 5 requests per second.
 
+`SEC_USER_AGENT` is also required when the first transaction for a new
+portfolio ticker is created, because that operation stores the official SEC
+identity. Once that identity exists in the ledger, later transactions reuse it
+without another SEC ticker-mapping request.
+
 ## Local Service Start Order
 
 1. From `backend/`, run `.\.venv\Scripts\python.exe -m alembic upgrade head`.
@@ -196,13 +219,16 @@ Use the header search field to enter at least two ticker or company-name
 characters. Results come from the SEC ticker mapping. Select a result with the
 mouse or the arrow keys and Enter to open `/companies/[ticker]`.
 
-Portfolio performance and thesis signals remain deterministic, backend-owned
-mock data during Milestone 6. The watchlist is no longer part of that mock
-dashboard response: it is stored in SQLite and loaded through its own API.
+Portfolio values now come from the persisted transaction ledger and manual
+price marks. The former mock portfolio summary and mock performance history
+have been removed; without historical prices, the application does not claim
+historical portfolio performance. Thesis signals remain deterministic,
+backend-owned mock data during Milestone 7. The watchlist remains stored in
+SQLite and is loaded through its own API.
 Official SEC data is used for company search, profiles, recent filing history,
 standardized company fundamentals, and watchlist identity validation. There is
-still no market-data provider, so watchlist cards do not claim prices or
-position values.
+still no market-data provider. Watchlist cards do not claim prices or position
+values, and every portfolio mark is visibly labeled as manual rather than live.
 
 ## Local Database and Migrations
 
@@ -224,6 +250,19 @@ Useful migration commands, run from `backend/`, are:
 .\.venv\Scripts\python.exe -m alembic downgrade -1
 ```
 
+Before a backup or reset, stop FastAPI so SQLite has no pending write-ahead-log
+state. To back up the default local database, copy its main file after the
+server has stopped:
+
+```powershell
+Set-Location .\backend
+New-Item -ItemType Directory -Force .\backups
+Copy-Item .\data\stock-intelligence.db .\backups\stock-intelligence-$(Get-Date -Format yyyyMMdd-HHmmss).db
+```
+
+The copied file contains both watchlist and portfolio records. Keep backups
+outside the repository if they contain sensitive personal information.
+
 To intentionally reset only the default local development database, first
 stop FastAPI, then run:
 
@@ -235,16 +274,54 @@ Remove-Item -LiteralPath .\data\stock-intelligence.db-wal -ErrorAction SilentlyC
 .\.venv\Scripts\python.exe -m alembic upgrade head
 ```
 
-This permanently removes the local watchlist. Migrations and test fixtures are
-versioned and are not deleted. Automated tests override `DATABASE_URL` with a
-fresh SQLite file under pytest's temporary directory, migrate it, and release
-all connections during cleanup; they never use the developer database.
+This permanently removes the local watchlist, transactions, and manual price
+marks. Migrations and test fixtures are versioned and are not deleted.
+Automated tests override `DATABASE_URL` with a fresh SQLite file under pytest's
+temporary directory, migrate it, and release all connections during cleanup;
+they never use the developer database.
 
-Milestone 6 is explicitly single-user and unauthenticated. A future PostgreSQL
+Milestone 7 is explicitly single-user and unauthenticated. A future PostgreSQL
 migration should preserve the API, service, repository, and typed model
 boundaries; it will require a PostgreSQL async driver, a PostgreSQL
 `DATABASE_URL`, and review of migration/database-specific constraints. No
 PostgreSQL server or driver is required now.
+
+### Portfolio Accounting and Manual Prices
+
+Migration `0002` adds `portfolio_transactions` and
+`portfolio_price_marks`. To upgrade an existing Milestone 6 database without
+removing its watchlist, stop FastAPI and run:
+
+```powershell
+Set-Location .\backend
+.\.venv\Scripts\python.exe -m alembic upgrade head
+```
+
+The ledger uses weighted-average cost and replays transactions by trade date,
+then creation timestamp, then ID. A buy adds `quantity × price + fees` to open
+cost basis. A sale removes the sold quantity's proportional average cost and
+calculates realized gain/loss as `quantity × sale price - fees - removed cost`.
+A full sale removes any final rounding remainder. Backend calculations use
+`Decimal`; stored money and quantity inputs use eight decimal places, while
+reported average cost retains twelve decimal places. Future trade dates are
+rejected using the current UTC date.
+
+Short selling is not supported. A create, edit, or delete that would make the
+chronological ledger negative returns a stable `409 portfolio_ledger_conflict`
+and is rolled back. Closed positions disappear from the open-position list,
+while their transactions and realized result remain in history and totals.
+
+Current prices are user-entered `MANUAL` marks, not live or automatically
+refreshed quotes. The application never substitutes a transaction price for a
+missing mark. An unmarked position still reports its quantity and cost basis,
+but its market value and unrealized values are explicitly unavailable. If even
+one open position is unmarked, complete portfolio market value and unrealized
+totals are `null`; marked subtotals and coverage counts remain available but
+are not presented as the complete portfolio.
+
+Everything in this milestone runs locally using free software and free SEC
+data. There is no paid API, hosted service, brokerage connection, or live-price
+dependency.
 
 ### Manual Persistence Check
 
@@ -253,6 +330,8 @@ PostgreSQL server or driver is required now.
 3. Open `/watchlist` and confirm Microsoft appears.
 4. Stop FastAPI, restart it without changing `DATABASE_URL`, and refresh `/watchlist`.
 5. Confirm Microsoft remains, then remove it and verify the empty state.
+6. Open `/portfolio`, record a buy, add a manual price, restart FastAPI, and
+   confirm the transaction, calculated position, and manual mark remain.
 
 ## SEC EDGAR Usage
 
@@ -314,7 +393,7 @@ units, periods, or provenance.
 The backend pins `httpx==0.28.1` because the SEC integration needs an
 asynchronous HTTP client with connection pooling, separate timeouts, and a
 mockable transport. Milestone 6 adds `SQLAlchemy==2.0.51`, `alembic==1.18.5`,
-and `aiosqlite==0.22.1`. No frontend dependency was added.
+and `aiosqlite==0.22.1`. Milestone 7 adds no backend or frontend dependency.
 
 ## Validation Commands
 
@@ -342,8 +421,8 @@ Set-Location .\backend
 - [x] Milestone 4: SEC EDGAR company search, profiles, and recent filings
 - [x] Milestone 5: SEC Company Facts financial trends and provenance
 - [x] Milestone 6: local SQLite persistence and a real watchlist
+- [x] Milestone 7: persistent portfolio transactions and position intelligence
 - [ ] Market-data integration
-- [ ] Portfolio transactions and return calculations
 - [ ] Deeper fundamental analysis and SEC filing-document retrieval
 - [ ] Thesis tracking and evidence comparison
 - [ ] Valuation scenarios and local AI-assisted analysis

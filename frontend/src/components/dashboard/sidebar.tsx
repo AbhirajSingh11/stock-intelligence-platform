@@ -14,7 +14,7 @@ interface NavigationItem {
 const navigation: NavigationItem[] = [
   { label: "Dashboard", icon: "dashboard", href: "/" },
   { label: "Watchlist", icon: "watchlist", href: "/watchlist" },
-  { label: "Portfolio", icon: "portfolio", href: "/#portfolio" },
+  { label: "Portfolio", icon: "portfolio", href: "/portfolio" },
   { label: "Filings", icon: "filings", href: null },
   { label: "Thesis", icon: "thesis", href: "/#thesis" },
 ];
@@ -159,7 +159,7 @@ export function Sidebar() {
             Local system online
           </div>
           <p className="mt-2 text-[11px] leading-4 text-secondary">
-            Milestone 06 · Local persistence
+            Milestone 07 · Portfolio ledger
           </p>
         </div>
       </aside>

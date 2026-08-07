@@ -1,28 +1,7 @@
-import type { PerformancePeriod } from "@/types/dashboard";
-
 const reviewedDateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
   year: "numeric",
-  timeZone: "UTC",
-});
-
-const rangeDateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  timeZone: "UTC",
-});
-
-const shortChartDateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "2-digit",
-  timeZone: "UTC",
-});
-
-const longChartDateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  year: "2-digit",
   timeZone: "UTC",
 });
 
@@ -86,25 +65,32 @@ export function formatReviewedDate(date: string): string {
   return reviewedDateFormatter.format(parseIsoDate(date));
 }
 
-export function formatDateRange(startDate: string, endDate: string): string {
-  return `${rangeDateFormatter.format(
-    parseIsoDate(startDate),
-  )} – ${rangeDateFormatter.format(parseIsoDate(endDate))}`;
-}
-
-export function formatChartDate(
-  date: string,
-  period: PerformancePeriod,
-): string {
-  const formatter =
-    period === "1Y" || period === "ALL"
-      ? longChartDateFormatter
-      : shortChartDateFormatter;
-  return formatter.format(parseIsoDate(date));
-}
-
 export function formatAsOf(timestamp: string): string {
   return asOfFormatter.format(new Date(timestamp));
+}
+
+export function formatExactCurrency(
+  value: string,
+  currency = "USD",
+): string {
+  return formatCurrency(Number(value), currency);
+}
+
+export function formatSignedExactCurrency(
+  value: string,
+  currency = "USD",
+): string {
+  const numeric = Number(value);
+  return `${numeric >= 0 ? "+" : "−"}${formatCurrency(
+    Math.abs(numeric),
+    currency,
+  )}`;
+}
+
+export function formatExactQuantity(value: string): string {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 8,
+  }).format(Number(value));
 }
 
 export function formatSecDate(date: string): string {

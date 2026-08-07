@@ -2,18 +2,23 @@
 
 import { useEffect, useState } from "react";
 
-import { getDashboardOverview } from "@/lib/api/client";
+import { getDashboardOverview, getPortfolioOverview } from "@/lib/api/client";
 import { formatAsOf } from "@/lib/formatters";
 import type { DashboardOverviewResponse } from "@/types/dashboard";
+import type { PortfolioOverviewResponse } from "@/types/portfolio";
 import { DashboardError, DashboardLoading } from "./dashboard-states";
-import { PerformanceChart } from "./performance-chart";
+import { PortfolioPositionsOverview } from "./portfolio-positions-overview";
 import { PortfolioSummary } from "./portfolio-summary";
 import { ThesisSignals } from "./thesis-signals";
 import { WatchlistGrid } from "./watchlist-grid";
 
 type DashboardState =
   | { status: "loading" }
-  | { status: "success"; data: DashboardOverviewResponse }
+  | {
+      status: "success";
+      data: DashboardOverviewResponse;
+      portfolio: PortfolioOverviewResponse;
+    }
   | { status: "error"; message: string };
 
 const initialDashboardState: DashboardState = { status: "loading" };
@@ -26,9 +31,12 @@ export function DashboardOverview() {
   useEffect(() => {
     const controller = new AbortController();
 
-    getDashboardOverview(controller.signal)
-      .then((data) => {
-        setState({ status: "success", data });
+    Promise.all([
+      getDashboardOverview(controller.signal),
+      getPortfolioOverview(controller.signal),
+    ])
+      .then(([data, portfolio]) => {
+        setState({ status: "success", data, portfolio });
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -76,23 +84,17 @@ export function DashboardOverview() {
     return <DashboardError message={state.message} onRetry={retry} />;
   }
 
-  const { data } = state;
+  const { data, portfolio } = state;
 
   return (
     <div className="space-y-6">
-      <PortfolioSummary
-        summary={data.portfolio_summary}
-        currency={data.currency}
-      />
+      <PortfolioSummary totals={portfolio.totals} currency={portfolio.currency} />
 
       <div
         id="portfolio"
         className="grid scroll-mt-36 items-start gap-4 lg:scroll-mt-8 xl:grid-cols-[minmax(0,2fr)_minmax(300px,0.85fr)]"
       >
-        <PerformanceChart
-          performance={data.performance}
-          currency={data.currency}
-        />
+        <PortfolioPositionsOverview portfolio={portfolio} />
         <div id="thesis" className="scroll-mt-36 lg:scroll-mt-8">
           <ThesisSignals signals={data.thesis_signals} />
         </div>
@@ -101,7 +103,7 @@ export function DashboardOverview() {
       <WatchlistGrid />
 
       <p className="text-right font-mono text-[9px] uppercase tracking-wider text-secondary">
-        {`Portfolio and thesis mock snapshot · As of ${formatAsOf(data.as_of)}`}
+        {`Portfolio persisted locally · Thesis snapshot as of ${formatAsOf(data.as_of)}`}
       </p>
     </div>
   );

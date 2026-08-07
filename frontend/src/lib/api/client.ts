@@ -1,4 +1,5 @@
 import type { DashboardOverviewResponse } from "@/types/dashboard";
+import type { ApiErrorResponse } from "@/types/api";
 import type {
   CompanyFilingsResponse,
   CompanyFundamentalsResponse,
@@ -10,6 +11,16 @@ import type {
   WatchlistEntry,
   WatchlistResponse,
 } from "@/types/watchlist";
+import type {
+  PortfolioDeleteResponse,
+  PortfolioOverviewResponse,
+  PortfolioPriceMark,
+  PortfolioPriceMarkInput,
+  PortfolioTransaction,
+  PortfolioTransactionInput,
+  PortfolioTransactionsResponse,
+  PortfolioTransactionUpdate,
+} from "@/types/portfolio";
 
 const defaultApiBaseUrl = "http://127.0.0.1:8000";
 
@@ -28,18 +39,11 @@ export class ApiRequestError extends Error {
   }
 }
 
-interface ApiErrorPayload {
-  error?: {
-    code?: string;
-    message?: string;
-  };
-}
-
 async function requestJson<T>(
   path: string,
   resourceName: string,
   options: {
-    method?: "GET" | "POST" | "DELETE";
+    method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
     body?: object;
     signal?: AbortSignal;
   } = {},
@@ -67,9 +71,9 @@ async function requestJson<T>(
   }
 
   if (!response.ok) {
-    let payload: ApiErrorPayload | undefined;
+    let payload: Partial<ApiErrorResponse> | undefined;
     try {
-      payload = (await response.json()) as ApiErrorPayload;
+      payload = (await response.json()) as Partial<ApiErrorResponse>;
     } catch {
       payload = undefined;
     }
@@ -173,5 +177,71 @@ export function deleteWatchlistEntry(
     `/api/v1/watchlist/${encodeURIComponent(ticker)}`,
     "the watchlist",
     { method: "DELETE", signal },
+  );
+}
+
+export function getPortfolioOverview(
+  signal?: AbortSignal,
+): Promise<PortfolioOverviewResponse> {
+  return requestJson<PortfolioOverviewResponse>(
+    "/api/v1/portfolio/overview",
+    "the portfolio overview",
+    { signal },
+  );
+}
+
+export function getPortfolioTransactions(
+  ticker?: string,
+  signal?: AbortSignal,
+): Promise<PortfolioTransactionsResponse> {
+  const query = ticker
+    ? `?${new URLSearchParams({ ticker }).toString()}`
+    : "";
+  return requestJson<PortfolioTransactionsResponse>(
+    `/api/v1/portfolio/transactions${query}`,
+    "portfolio transactions",
+    { signal },
+  );
+}
+
+export function createPortfolioTransaction(
+  input: PortfolioTransactionInput,
+): Promise<PortfolioTransaction> {
+  return requestJson<PortfolioTransaction>(
+    "/api/v1/portfolio/transactions",
+    "the portfolio transaction",
+    { method: "POST", body: input },
+  );
+}
+
+export function updatePortfolioTransaction(
+  transactionId: number,
+  input: PortfolioTransactionUpdate,
+): Promise<PortfolioTransaction> {
+  return requestJson<PortfolioTransaction>(
+    `/api/v1/portfolio/transactions/${transactionId}`,
+    "the portfolio transaction",
+    { method: "PATCH", body: input },
+  );
+}
+
+export function deletePortfolioTransaction(
+  transactionId: number,
+): Promise<PortfolioDeleteResponse> {
+  return requestJson<PortfolioDeleteResponse>(
+    `/api/v1/portfolio/transactions/${transactionId}`,
+    "the portfolio transaction",
+    { method: "DELETE" },
+  );
+}
+
+export function setPortfolioPriceMark(
+  ticker: string,
+  input: PortfolioPriceMarkInput,
+): Promise<PortfolioPriceMark> {
+  return requestJson<PortfolioPriceMark>(
+    `/api/v1/portfolio/marks/${encodeURIComponent(ticker)}`,
+    "the manual portfolio price",
+    { method: "PUT", body: input },
   );
 }
